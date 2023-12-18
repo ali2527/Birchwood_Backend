@@ -40,7 +40,7 @@ const parentSchema = new Schema(
       unique: true,
       dropDups: true,
     },
-    phoneNumber:{
+    phone:{
       type: String,
       required: true,
     },

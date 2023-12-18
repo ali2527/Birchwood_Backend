@@ -1,10 +1,12 @@
 const express = require("express")
-const { register,signin} = require("../../../Controllers/Admin/adminAuthController");
+const { register,signin} = require("../../../Controllers/Teacher/authController");
 const {emailVerificationCode,verifyRecoverCode,resetPassword} = require("../../../Controllers/Auth");
 const router = express.Router()
-const { adminRegisterValidator , emailCodeValidator ,verifyCodeValidator,resetPasswordValidator,signinValidator } = require("../../../Validator/authValidator")
+const { teacherSignupValidator , emailCodeValidator ,verifyCodeValidator,resetPasswordValidator,signinValidator } = require("../../../Validator/authValidator")
+const {uploadFile} = require("../../../Middlewares/upload")
 
-router.post("/register",adminRegisterValidator, register);
+
+router.post("/register",uploadFile,teacherSignupValidator, register);
 router.post("/signin",signinValidator, signin);
 router.post("/emailVerificationCode",emailCodeValidator, emailVerificationCode);
 router.post("/verifyRecoverCode",verifyCodeValidator, verifyRecoverCode);

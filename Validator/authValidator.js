@@ -6,13 +6,11 @@ const user = require("../Models/User")
 //signup Validator
 exports.signupValidator = [
   check('email', "Email is Required").not().isEmpty().isEmail().withMessage("Email is Invalid"),
-  body('firstName').not().isEmpty().withMessage("First Name is Required"),
-  body('age').not().isEmpty().withMessage("Age is Required"),
-  body('parent').not().isEmpty().withMessage("Parent/Guardian Name is Required"),
-  body('phoneNumber').not().isEmpty().withMessage("Phone Number is Required"),
-  body('gradeLevel').not().isEmpty().withMessage("Grade Level is Required"),
-  body('city').not().isEmpty().withMessage("City is Required"),
-  body('subjects').isArray({ min: 1 }).withMessage("Atleast 1 Subject is Required"),
+  body('fatherFirstName').not().isEmpty().withMessage("Father First Name is Required"),
+  body('fatherLastName').not().isEmpty().withMessage("Father Last Name is Required"),
+  body('motherFirstName').not().isEmpty().withMessage("Mother First Name is Required"),
+  body('motherLastName').not().isEmpty().withMessage("Mother Last Name is Required"),
+  body('phone').not().isEmpty().withMessage("Phone Number is Required"),
   body('password').not().isEmpty().withMessage("Password is Required").isStrongPassword().withMessage("Password is too Weak"),
   function (req, res, next) {
     const errors = validationResult(req);
@@ -98,7 +96,7 @@ exports.adminRegisterValidator = [
 
 
 //signup coach Validator
-exports.coachSignupValidator = [
+exports.teacherSignupValidator = [
   check('email', "Email is Required").not().isEmpty().isEmail().withMessage("Email is Invalid"),
   body('email').not().isEmpty().withMessage("Email is Required"),
   body('firstName').not().isEmpty().withMessage("First Name is Required"),
@@ -106,13 +104,8 @@ exports.coachSignupValidator = [
   body('phone').not().isEmpty().withMessage("Phone Number is Required"),
   body('address').not().isEmpty().withMessage("Address is Required"),
   body('state').not().isEmpty().withMessage("State is Required"),
-  body('applicationType').not().isEmpty().withMessage("Application Type is Required"),
-  body('subjects').not().isEmpty().withMessage("Subjects are Required"),
-  body('service').not().isEmpty().withMessage("Service is Required"),
   body('city').not().isEmpty().withMessage("City is Required"),
   body('bio').not().isEmpty().withMessage("Bio is Required"),
-  // body('education').isArray({ min: 1 }).withMessage("Atleast 1 Education Detail is Required"),
-  // body('reference').isArray({ min: 2 }).withMessage("2 References are Required"),
   body('password').not().isEmpty().withMessage("Password is Required").isStrongPassword().withMessage("Password is too Weak"),
   function (req, res, next) {
     const errors = validationResult(req);

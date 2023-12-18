@@ -70,32 +70,6 @@ const employmentSchema = new mongoose.Schema({
 });
 
 
-const referenceSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required:true,
-    default:"" 
-  },
-  phone:{
-    type:String,
-    required:false,
-  },
-  email:{
-    type:String,
-    required:false,
-  },
-  company: {
-    type: String,
-    required:false,
-    default:"" 
-  },
-  year:{
-    type:Number,
-    required:false,
-  },
-});
-
-
 const teacherSchema = new Schema(
   {
     teacherId: {
@@ -161,7 +135,6 @@ const teacherSchema = new Schema(
       default:""
     },
     employment:[employmentSchema],
-    reference:[referenceSchema],
     salt: String,
     status: {
       type: String,

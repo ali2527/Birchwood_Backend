@@ -1,5 +1,7 @@
 //Models
-const User = require("../../Models/User");
+const Teacher = require("../../Models/Teacher");
+const Parent = require("../../Models/Parent");
+
 
 //Helpers
 const { generateToken } = require("../../Helpers/index");
@@ -22,15 +24,16 @@ const dayjs = require("dayjs");
 exports.register = async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
   try {
-    let user = await User.findOne({ email });
+    let teacher = await Teacher.findOne({ email });
+    let parent = await Parent.findOne({ email });
 
-    if (user) {
+    if (parent || teacher) {
       return res
         .status(400)
         .json(ApiResponse({}, "User with this Email Already Exist",false));
     }
 
-    user = new User({
+    parent = new Parent({
       firstName,
       lastName,
       email,
@@ -39,13 +42,13 @@ exports.register = async (req, res) => {
       status:"ACTIVE"
     });
 
-    await user.save();
+    await parent.save();
 
     return res
       .status(200)
       .json(
         ApiResponse(
-          { user },
+          { parent },
           true,
           "Admin Created Successfully"
         )
@@ -60,7 +63,7 @@ exports.signin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    User.findOne({ email,isAdmin:true }).then((user) => {
+    Parent.findOne({ email,isAdmin:true }).then((user) => {
         if (!user) {
           return res.json(ApiResponse({}, "Admin with this email not found", false));
         }
