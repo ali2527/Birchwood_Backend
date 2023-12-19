@@ -3,7 +3,7 @@ const { ApiResponse } = require("../Helpers")
 
 
 //add Query Validator
-exports.addCourseValidator = [
+exports.addInventoryValidator = [
   body('courseCode').not().isEmpty().withMessage("Course code is Required"),
   body('title').not().isEmpty().withMessage("Title is Required"),
 //   body('duration').not().isEmpty().withMessage("Course duration is Required"),

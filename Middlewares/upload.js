@@ -8,13 +8,17 @@ const imageStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    
     req.body.image = uniqueSuffix + path.extname(file.originalname);
+
+
+ 
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
 
 
- const multiStorage = multer.diskStorage({
+const multiStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "Uploads/");
   },
@@ -36,15 +40,7 @@ exports.uploadFile = function (req, res, next) {
         file.mimetype === "image/jpeg" ||
         file.mimetype === "image/jpg" ||
         file.mimetype === "image/gif" ||
-        file.mimetype === "image/webop" || 
-        file.mimetype === "image/gif" ||
-        file.mimetype === "video/mp4" ||
-          file.mimetype === "video/mpeg" ||
-          file.mimetype === "video/quicktime" ||
-          file.mimetype === "video/x-msvideo" ||
-          file.mimetype === "video/x-flv" ||
-          file.mimetype === "video/x-matroska" ||
-          file.mimetype === "video/webm"
+        file.mimetype === "image/webop"
       ) {
         cb(null, true);
       } else if (!file) {
@@ -82,10 +78,35 @@ const uploadMultiple = multer({
     ) {
       cb(null, true);
     } else {
-      cb(new Error("File type not allowed"), false);
+      // cb(new Error("File type not allowed"), false);
+      cb(null, true);
     }
   },
 });
 
 exports.uploadMultiple = uploadMultiple.fields([{ name: "image", maxCount: 1 }, { name: "video", maxCount: 1 }]);
 
+const uploadProduct = multer({
+  storage: multiStorage,
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype === "image/png" ||
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/jpg" ||
+      file.mimetype === "image/gif" ||
+        file.mimetype === "video/mp4" ||
+          file.mimetype === "video/mpeg" ||
+          file.mimetype === "video/quicktime" ||
+          file.mimetype === "video/x-msvideo" ||
+          file.mimetype === "video/x-flv" ||
+          file.mimetype === "video/x-matroska" ||
+          file.mimetype === "video/webm"
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("File type not allowed"), false);
+    }
+  },
+});
+
+exports.uploadProduct = uploadProduct.fields([{ name: "image", maxCount: 1 }, { name: "gallery", maxCount: 10 }]);

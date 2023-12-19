@@ -11,6 +11,10 @@ router.use('/profile',require("./Parent/Profile"))
 router.use('/teacher/auth', require('./Teacher/TeacherAuth'))
 router.use('/teacher/profile',require("./Teacher/TeacherProfile"))
 
+//inventory routes
+router.use('/inventory', require('./Inventory'))
+
+
 // //chat routes
 // router.use('/chat', require('./Chat'))
 
@@ -18,8 +22,6 @@ router.use('/teacher/profile',require("./Teacher/TeacherProfile"))
 // //query routes
 // router.use('/query', require('./Query'))
 
-// //review routes
-// router.use('/review', require('./Review'))
 
 // //services route
 // router.use('/service', require('./Service'))
@@ -61,7 +63,7 @@ router.use('/teacher/profile',require("./Teacher/TeacherProfile"))
 
 //admin routes
 router.use('/admin/auth', require('./Admin/AdminAuth'))
-// router.use('/admin/user', require('./Admin/AdminUser'))
+router.use('/admin/user', require('./Admin/AdminUser'))
 // router.use('/admin/lesson', require('./Admin/AdminLesson'))
 
 

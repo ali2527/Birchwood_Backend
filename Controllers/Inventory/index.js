@@ -1,8 +1,7 @@
 //Models
 const User = require("../../Models/User");
 const Class = require("../../Models/Class");
-const Class = require("../../Models/Class");
-const Rates = require("../../Models/Rates");
+const Inventory = require("../../Models/Inventory");
 const Commission = require("../../Models/Commission");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -25,31 +24,47 @@ const {
 } = require("../../Helpers/verification");
 const mongoose = require("mongoose");
 
-exports.addClass = async (req, res) => {
-  const { className, description } = req.body;
+//addInventory
+exports.addInventory = async (req, res) => {
+  const {
+    title,
+    description,
+    quantity,
+    manufacturer,
+    purchaseDate,
+    unitPrice,
+    lastAuditDate,
+    notes,
+    category,
+  } = req.body;
+
   try {
-    // Check if the student exists
-    const existingclass = await Class.findOne({ className });
-
-    if (!existingclass) {
-      return res.json(ApiResponse({}, "Class Already Exists", false));
-    }
-
-    // Save the classroom
-    const classroom = new Class({
-      className,
+    const inventory = new Inventory({
+      title,
       description,
+      quantity,
+      manufacturer,
+      purchaseDate,
+      unitPrice,
+      lastAuditDate,
+      notes,
+      category,
+      image: req.files.image ? req.files.image[0].filename : "",
+      gallery: req.files.gallery
+        ? req.files.gallery.map((item) => item.filename)
+        : "",
     });
 
-    await classroom.save();
+    await inventory.save();
 
-    const title = "New Class Created";
-    const content = `A new Class has been created. Class name : ${className}`;
-    sendNotificationToAdmin(title, content);
+    return res.status(200).json(
+      ApiResponse(
+        { Inventory },
 
-    return res
-      .status(200)
-      .json(ApiResponse({ classroom }, "Class Created Successfully", true));
+        "Inventory Created Successfully",
+        true
+      )
+    );
   } catch (error) {
     return res.json(
       ApiResponse(
@@ -61,82 +76,189 @@ exports.addClass = async (req, res) => {
   }
 };
 
-exports.getAllClasses = async (req, res) => {
+exports.getAllInventorys = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
 
     let finalAggregate = [
       {
-        $sort: {
-          className: -1,
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
         },
+      },
+      {
+        $unwind: "$category",
       },
     ];
 
-    if (req.query.status) {
-      finalAggregate.push({
-        $match: {
-          status: req.query.status,
-        },
-      });
+    if (req.query) {
+      if (req.query.keyword) {
+        finalAggregate.push({
+          $match: {
+            $or: [
+              {
+                title: {
+                  $regex: ".*" + req.query.keyword.toLowerCase() + ".*",
+                  $options: "i",
+                },
+                description: {
+                  $regex: ".*" + req.query.keyword.toLowerCase() + ".*",
+                  $options: "i",
+                },
+              },
+            ],
+          },
+        });
+      }
+      if (req.query.category) {
+        finalAggregate.push({
+          $match: {
+            category: req.query.category,
+          },
+        });
+      }
+      if (req.query.status) {
+        finalAggregate.push({
+          $match: {
+            status: req.query.status,
+          },
+        });
+      }
     }
 
     const myAggregate =
       finalAggregate.length > 0
-        ? Class.aggregate(finalAggregate)
-        : Class.aggregate([]);
+        ? Inventory.aggregate(finalAggregate)
+        : Inventory.aggregate([]);
 
-    Class.aggregatePaginate(myAggregate, { page, limit }).then((classes) => {
-      res.json(ApiResponse(classes));
-    });
+    Inventory.aggregatePaginate(myAggregate, { page, limit }).then(
+      (inventorys) => {
+        res.json(ApiResponse(inventorys));
+      }
+    );
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
 
-// Get classroom by ID
-exports.getClassById = async (req, res) => {
+// Get inventory by ID
+exports.getInventoryById = async (req, res) => {
   try {
-    const classroom = await Class.findById(req.params.id);
+    const inventory = await Inventory.findById(req.params.id);
 
-    if (!classroom) {
-      return res.json(ApiResponse({}, "Class not found", true));
+    if (!inventory) {
+      return res.json(ApiResponse({}, "Inventory not found", true));
     }
 
-    return res.json(ApiResponse({ classroom }, "", true));
+    return res.json(ApiResponse({ inventory }, "", true));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
 
-// Get classroom by ID
-exports.updateClass = async (req, res) => {
+// Get inventory by Category
+exports.getInventoryByCategory = async (req, res) => {
   try {
-    let classroom = await Class.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const inventorys = await Inventory.findOne({ category: req.params.id });
 
-    if (!classroom) {
-      return res.json(ApiResponse({}, "No classroom found", false));
+    if (!inventorys) {
+      return res.json(ApiResponse({}, "Inventorys not found", true));
     }
 
-    return res.json(ApiResponse(classroom, "classroom updated successfully"));
+    return res.json(ApiResponse({ inventorys }, "", true));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
 
-// Delete a classroom
-exports.deleteClass = async (req, res) => {
+exports.updateInventory = async (req, res) => {
   try {
-    const classroom = await Class.findByIdAndRemove(req.params.id);
+    let inventory = await Inventory.findById(req.params.id);
+    let oldImages = req.body.oldImages ? JSON.parse(req.body.oldImages) : [];
+    let allImages = [];
 
-    if (!classroom) {
-      return res.json(ApiResponse({}, "Class not found", false));
+    inventory.title = req.body.title ? req.body.title : inventory.title || "";
+    inventory.description = req.body.description
+      ? req.body.description
+      : inventory.description || "";
+    inventory.unitPrice = req.body.unitPrice
+      ? req.body.unitPrice
+      : inventory.unitPrice || 0;
+    inventory.quantity = req.body.quantity
+      ? req.body.quantity
+      : inventory.quantity || 0;
+    inventory.manufacturer = req.body.manufacturer
+      ? req.body.manufacturer
+      : inventory.manufacturer || "";
+    inventory.purchaseDate = req.body.purchaseDate
+      ? req.body.purchaseDate
+      : inventory.purchaseDate;
+    inventory.lastAuditDate = req.body.lastAuditDate
+      ? req.body.lastAuditDate
+      : inventory.lastAuditDate;
+    inventory.notes = req.body.notes ? req.body.notes : inventory.notes;
+    inventory.category = req.body.category
+      ? req.body.category
+      : inventory.category || "";
+
+    let temp = req.files.gallery
+      ? req.files.gallery.map((item) => item.filename)
+      : [];
+    allImages = [...inventory.gallery, ...temp];
+
+    if (oldImages && oldImages.length > 0) {
+      oldImages.map((item) => {
+        const filePath = `./Uploads/${item}`;
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
     }
 
-    return res.json(ApiResponse({}, "Class Deleted Successfully", true));
+    inventory.gallery =
+      allImages.filter((image) => !oldImages.includes(image)) || [];
+
+    await inventory.save();
+    return res.json(ApiResponse(inventory, "Inventory updated successfully"));
+  } catch (error) {
+    // Handle errors
+    console.error(error);
+    return res.json(ApiResponse({}, error.message, false));
+  }
+};
+//toggleStatus
+exports.toggleStatus = async (req, res) => {
+  try {
+    
+    let inventory = await Inventory.findById(req.params.id);
+
+
+      inventory.status = inventory.status == "ACTIVE" ? "INACTIVE" : "ACTIVE"
+      await inventory.save();     
+
+      return res.json(ApiResponse(inventory, "Inventory Status Changed"));
+  
+  } catch (error) {
+    return res.json(ApiResponse({}, error.message, false));
+  }
+};
+
+
+
+// Delete a inventory
+exports.deleteInventory = async (req, res) => {
+  try {
+    const inventory = await Inventory.findByIdAndRemove(req.params.id);
+
+    if (!inventory) {
+      return res.json(ApiResponse({}, "Inventory not found", false));
+    }
+
+    return res.json(ApiResponse({}, "Inventory Deleted Successfully", true));
   } catch (error) {
     return res.json(
       ApiResponse(

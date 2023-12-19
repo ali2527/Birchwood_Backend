@@ -27,7 +27,26 @@ const inventorySchema = new Schema(
       type: Number,
       required: true,
     },
-
+    manufacturer:{
+      type: String,
+      required:false
+    },
+    purchaseDate:{
+      type: Date,
+      dafault:new Date()
+    },
+    unitPrice:{
+      type:Number,
+      default:0
+    },
+    lastAuditDate:{
+      type: Date,
+      dafault:new Date()
+    },
+    notes:{
+      type: String,
+      required:false
+    },
     category:{
       type: mongoose.Schema.Types.ObjectId,
       ref: "category",
@@ -38,9 +57,12 @@ const inventorySchema = new Schema(
       enum: ["ACTIVE", "INACTIVE"],
       default: "ACTIVE",
     },
-    image: {
-      type: String,
-    },
+    gallery:[
+      {
+        type: String,
+        required:false,
+    }
+    ]
   },
   { timestamps: true }
 );
