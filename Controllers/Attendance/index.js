@@ -1,9 +1,6 @@
 //Models
-const User = require("../../Models/User");
 const Children = require("../../Models/Children");
-const Class = require("../../Models/Class");
-const Inventory = require("../../Models/Inventory");
-const Commission = require("../../Models/Commission");
+const Attendance = require("../../Models/Attendance");
 const fs = require("fs");
 const crypto = require("crypto");
 const KJUR = require("jsrsasign");
@@ -25,38 +22,43 @@ const {
 } = require("../../Helpers/verification");
 const mongoose = require("mongoose");
 
+
 //addInventory
-exports.addChild = async (req, res) => {
+exports.markAttendance = async (req, res) => {
   const {
-    rollNumber,
-    term,
-    firstName,
-    lastName,
-    age,
-    birthday,
-    homeNumber,
-    image,
-    classroom,
+    children,
+    checkInDate,
+    leaveReason,
+    sickDescription,
+    status,
   } = req.body;
 
   try {
-    const child = new Children({
-      rollNumber,
-      term,
-      firstName,
-      lastName,
-      age,
-      birthday,
-      homeNumber,
-      classroom,
-      image: req.files.image ? req.files.image[0].filename : "",
-    });
+    let child = Children.findById(children)
 
-    await child.save();
+    if(!child){
+        return res.json(ApiResponse({}, "Child Not Found", false));
+    }
+
+    if(!child.class){
+        return res.json(ApiResponse({}, "Child is not assigned to any class", false));
+    }
+
+    const checkIn = new Attendance({
+        children,
+        class:child.class,
+        checkInDate,
+        leaveReason,
+        sickDescription,
+        status,
+      });
+  
+
+    await checkIn.save();
 
     return res
       .status(200)
-      .json(ApiResponse({ child }, "Child Created Successfully", true));
+      .json(ApiResponse({ child }, "CheckIn Marked Successfully", true));
   } catch (error) {
     return res.json(
       ApiResponse(
@@ -68,7 +70,9 @@ exports.addChild = async (req, res) => {
   }
 };
 
-exports.getAllChildren = async (req, res) => {
+
+
+exports.getAllAttendance = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
