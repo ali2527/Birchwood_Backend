@@ -1,6 +1,6 @@
 //Models
 const Children = require("../../Models/Children");
-const Attendance = require("../../Models/Attendance");
+const Attendance = require("../../Models/TeacherAttendance");
 const fs = require("fs");
 const crypto = require("crypto");
 const KJUR = require("jsrsasign");
@@ -21,14 +21,15 @@ const {
   validateResetToken,
 } = require("../../Helpers/verification");
 const mongoose = require("mongoose");
+const Teacher = require("../../Models/Teacher");
 
 //mark Attendance
 exports.markAttendance = async (req, res) => {
-  const { children, checkInDate, leaveReason, sickDescription, status } = req.body;
+  const { teacher, checkInDate,checkInTime,checkOutTime, leaveReason, sickDescription, status } = req.body;
 
   try {
     // Check if attendance already exists for the given child and check-in date
-    let existingAttendance = await Attendance.findOne({ children, checkInDate });
+    let existingAttendance = await Attendance.findOne({ teacher, checkInDate });
 
     if (existingAttendance) {
       // Update the existing attendance record
@@ -42,19 +43,16 @@ exports.markAttendance = async (req, res) => {
     }
 
     // Attendance does not exist, create a new one
-    let child = await Children.findById(children);
+    let existingTeacher = await Teacher.findById(teacher);
 
-    if (!child) {
-      return res.json(ApiResponse({}, "Child Not Found", false));
-    }
-
-    if (!child.classroom) {
-      return res.json(ApiResponse({}, "Child is not assigned to any classroom", false));
+    if (!existingTeacher) {
+      return res.json(ApiResponse({}, "Teacher Not Found", false));
     }
 
     const newAttendance = new Attendance({
-      children,
-      classroom: child.classroom,
+      teacher,
+      checkInTime,
+      checkOutTime,
       checkInDate,
       leaveReason,
       sickDescription,
@@ -78,26 +76,16 @@ exports.getAllAttendance = async (req, res) => {
     let finalAggregate = [
       {
         $lookup: {
-          from: "classroom",
-          localField: "classroom",
+          from: "teacher",
+          localField: "teacher",
           foreignField: "_id",
-          as: "classroom",
+          as: "teacher",
         },
       },
       {
-        $unwind: "$classroom",
+        $unwind: "$teacher",
       },
-      {
-        $lookup: {
-          from: "children",
-          localField: "children",
-          foreignField: "_id",
-          as: "children",
-        },
-      },
-      {
-        $unwind: "$children",
-      },
+      
     ];
 
     if (req.query) {
@@ -106,13 +94,13 @@ exports.getAllAttendance = async (req, res) => {
           $match: {
             $or: [
               {
-                "children.firstName": {
+                "teacher.firstName": {
                   $regex: ".*" + req.query.keyword.toLowerCase() + ".*",
                   $options: "i",
                 },
               },
               {
-                "children.lastName": {
+                "teacher.lastName": {
                   $regex: ".*" + req.query.keyword.toLowerCase() + ".*",
                   $options: "i",
                 },
@@ -122,14 +110,14 @@ exports.getAllAttendance = async (req, res) => {
         });
       }
 
-
-      if (req.query.classroom) {
+      if (req.query.teacher) {
         finalAggregate.push({
           $match: {
-            classroom: req.query.classroom,
+            teacher: req.query.teacher,
           },
         });
       }
+
 
       if (from) {
         finalAggregate.push({
@@ -211,24 +199,9 @@ exports.updateAttendance = async (req, res) => {
 
 
 // Get Attendance by Classroom
-exports.getAttendanceByClassroom = async (req, res) => {
+exports.getAttendanceByTeacher = async (req, res) => {
   try {
-    const attendance = await Attendance.find({ classroom: req.params.id });
-
-    if (!attendance) {
-      return res.json(ApiResponse({}, "Attendance not found", true));
-    }
-
-    return res.json(ApiResponse({ attendance }, "", true));
-  } catch (error) {
-    return res.json(ApiResponse({}, error.message, false));
-  }
-};
-
-// Get Attendance by Child
-exports.getAttendanceByChild = async (req, res) => {
-  try {
-    const attendance = await Attendance.find({ children: req.params.id });
+    const attendance = await Attendance.find({ teacher: req.params.id });
 
     if (!attendance) {
       return res.json(ApiResponse({}, "Attendance not found", true));

@@ -29,9 +29,9 @@ const postSchema = new mongoose.Schema(
       required: false,
     },
 
-    class: {
+    classroom: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "class",
+      ref: "classroom",
       required: false,
     },
     images: [

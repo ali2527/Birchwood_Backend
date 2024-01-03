@@ -1,6 +1,6 @@
 //Models
 const User = require("../../Models/User");
-const Class = require("../../Models/Class");
+const Classroom = require("../../Models/Classroom");
 const Inventory = require("../../Models/Inventory");
 const Commission = require("../../Models/Commission");
 const fs = require("fs");

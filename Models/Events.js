@@ -28,6 +28,10 @@ const eventSchema = new Schema(
         type: String,
         required:false,
     },
+    classroom:{
+        type: mongoose.Schema.Types.ObjectId,
+      ref: "classroom",
+    },
     status: {
         type: String,
         enum: ["ACTIVE", "INACTIVE"],

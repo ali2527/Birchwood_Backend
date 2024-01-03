@@ -66,7 +66,7 @@ const childSchema = new Schema(
     },
     classroom:{
       type: mongoose.Schema.Types.ObjectId,
-      ref: "class",
+      ref: "classroom",
     },
    
     salt: String,

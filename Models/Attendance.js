@@ -9,9 +9,9 @@ const attendanceSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "children",
     },
-    class: {
+    classroom: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "class",
+      ref: "classroom",
     },
     checkInDate: {
       type: Date,
@@ -36,8 +36,8 @@ const attendanceSchema = new Schema(
 
 attendanceSchema.plugin(mongoosePaginate);
 attendanceSchema.plugin(aggregatePaginate);
-attendanceSchema.index({ children: 1, class: 1, checkInDate: 1 });
+attendanceSchema.index({ children: 1, classroom: 1, checkInDate: 1 });
 attendanceSchema.index({ children: 1 });
-attendanceSchema.index({ class: 1 });
+attendanceSchema.index({ classroom: 1 });
 attendanceSchema.index({ checkInDate: 1 });
 module.exports = mongoose.model("attendance", attendanceSchema);

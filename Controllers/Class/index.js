@@ -1,7 +1,7 @@
 //Models
 const User = require("../../Models/User");
-const Class = require("../../Models/Class");
-const Class = require("../../Models/Class");
+const Classroom = require("../../Models/Classroom");
+const Classroom = require("../../Models/Classroom");
 const Rates = require("../../Models/Rates");
 const Commission = require("../../Models/Commission");
 const fs = require("fs");
@@ -25,31 +25,31 @@ const {
 } = require("../../Helpers/verification");
 const mongoose = require("mongoose");
 
-exports.addClass = async (req, res) => {
-  const { className, description } = req.body;
+exports.addClassroom = async (req, res) => {
+  const { classroomName, description } = req.body;
   try {
     // Check if the student exists
-    const existingclass = await Class.findOne({ className });
+    const existingclassroom = await Classroom.findOne({ classroomName });
 
-    if (!existingclass) {
-      return res.json(ApiResponse({}, "Class Already Exists", false));
+    if (!existingclassroom) {
+      return res.json(ApiResponse({}, "Classroom Already Exists", false));
     }
 
     // Save the classroom
-    const classroom = new Class({
-      className,
+    const classroom = new Classroom({
+      classroomName,
       description,
     });
 
     await classroom.save();
 
-    const title = "New Class Created";
-    const content = `A new Class has been created. Class name : ${className}`;
+    const title = "New Classroom Created";
+    const content = `A new Classroom has been created. Classroom name : ${classroomName}`;
     sendNotificationToAdmin(title, content);
 
     return res
       .status(200)
-      .json(ApiResponse({ classroom }, "Class Created Successfully", true));
+      .json(ApiResponse({ classroom }, "Classroom Created Successfully", true));
   } catch (error) {
     return res.json(
       ApiResponse(
@@ -61,7 +61,7 @@ exports.addClass = async (req, res) => {
   }
 };
 
-exports.getAllClasses = async (req, res) => {
+exports.getAllClassroomes = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
@@ -69,7 +69,7 @@ exports.getAllClasses = async (req, res) => {
     let finalAggregate = [
       {
         $sort: {
-          className: -1,
+          classroomName: -1,
         },
       },
     ];
@@ -84,11 +84,11 @@ exports.getAllClasses = async (req, res) => {
 
     const myAggregate =
       finalAggregate.length > 0
-        ? Class.aggregate(finalAggregate)
-        : Class.aggregate([]);
+        ? Classroom.aggregate(finalAggregate)
+        : Classroom.aggregate([]);
 
-    Class.aggregatePaginate(myAggregate, { page, limit }).then((classes) => {
-      res.json(ApiResponse(classes));
+    Classroom.aggregatePaginate(myAggregate, { page, limit }).then((classroomes) => {
+      res.json(ApiResponse(classroomes));
     });
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
@@ -96,12 +96,12 @@ exports.getAllClasses = async (req, res) => {
 };
 
 // Get classroom by ID
-exports.getClassById = async (req, res) => {
+exports.getClassroomById = async (req, res) => {
   try {
-    const classroom = await Class.findById(req.params.id);
+    const classroom = await Classroom.findById(req.params.id);
 
     if (!classroom) {
-      return res.json(ApiResponse({}, "Class not found", true));
+      return res.json(ApiResponse({}, "Classroom not found", true));
     }
 
     return res.json(ApiResponse({ classroom }, "", true));
@@ -111,9 +111,9 @@ exports.getClassById = async (req, res) => {
 };
 
 // Get classroom by ID
-exports.updateClass = async (req, res) => {
+exports.updateClassroom = async (req, res) => {
   try {
-    let classroom = await Class.findByIdAndUpdate(req.params.id, req.body, {
+    let classroom = await Classroom.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
 
@@ -128,15 +128,15 @@ exports.updateClass = async (req, res) => {
 };
 
 // Delete a classroom
-exports.deleteClass = async (req, res) => {
+exports.deleteClassroom = async (req, res) => {
   try {
-    const classroom = await Class.findByIdAndRemove(req.params.id);
+    const classroom = await Classroom.findByIdAndRemove(req.params.id);
 
     if (!classroom) {
-      return res.json(ApiResponse({}, "Class not found", false));
+      return res.json(ApiResponse({}, "Classroom not found", false));
     }
 
-    return res.json(ApiResponse({}, "Class Deleted Successfully", true));
+    return res.json(ApiResponse({}, "Classroom Deleted Successfully", true));
   } catch (error) {
     return res.json(
       ApiResponse(

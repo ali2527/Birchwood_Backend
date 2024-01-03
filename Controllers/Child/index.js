@@ -1,7 +1,7 @@
 //Models
 const User = require("../../Models/User");
 const Children = require("../../Models/Children");
-const Class = require("../../Models/Class");
+const Classroom = require("../../Models/Classroom");
 const Inventory = require("../../Models/Inventory");
 const Commission = require("../../Models/Commission");
 const fs = require("fs");
@@ -76,7 +76,7 @@ exports.getAllChildren = async (req, res) => {
     let finalAggregate = [
       {
         $lookup: {
-          from: "class",
+          from: "classroom",
           localField: "classroom",
           foreignField: "_id",
           as: "classroom",
@@ -163,7 +163,7 @@ exports.getChildById = async (req, res) => {
 };
 
 // Get inventory by Category
-exports.getChildrenByClass = async (req, res) => {
+exports.getChildrenByClassroom = async (req, res) => {
   try {
     const children = await Children.find({ classroom: req.params.id });
 

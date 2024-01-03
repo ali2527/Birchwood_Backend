@@ -4,14 +4,14 @@ const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 const {generateRandom6DigitID} = require("../Helpers")
 const Schema = mongoose.Schema;
 
-const classSchema = new Schema(
+const classroomSchema = new Schema(
   {
-    classId: {
+    classroomId: {
       type: String,
       unique: true,
       default: generateRandom6DigitID('CL'),
     },
-    className: {
+    classroomName: {
       type:String,
       default: true,
     },
@@ -36,6 +36,6 @@ const classSchema = new Schema(
   { timestamps: true }
 );
 
-classSchema.plugin(mongoosePaginate);
-classSchema.plugin(aggregatePaginate);
-module.exports = mongoose.model("class", classSchema);
+classroomSchema.plugin(mongoosePaginate);
+classroomSchema.plugin(aggregatePaginate);
+module.exports = mongoose.model("classroom", classroomSchema);

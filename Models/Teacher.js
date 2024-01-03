@@ -124,9 +124,9 @@ const teacherSchema = new Schema(
     hashed_password: {
       type: String,
     },
-    class: {
+    classroom: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "class",
+      ref: "classroom",
     },
     education:[educationSchema],
     bio: {
