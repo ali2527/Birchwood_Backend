@@ -110,10 +110,10 @@ exports.getAllcategories = async (req, res) => {
   }
 };
 
-// Get lesson by ID
+// Get category by ID
 exports.getCategoryById = async (req, res) => {
   try {
-    const category = await Category.findById(req.params.id).populate("courses");
+    const category = await Category.findById(req.params.id)
 
     if (!category) {
       return res.json(ApiResponse({}, "Category not found", true));
@@ -125,7 +125,7 @@ exports.getCategoryById = async (req, res) => {
   }
 };
 
-// Get lesson by ID
+// Get category by ID
 exports.updateCategory = async (req, res) => {
   try {
     let category = await Category.findByIdAndUpdate(req.params.id, req.body, {
@@ -147,7 +147,10 @@ exports.toggleStatus = async (req, res) => {
   try {
     
     let category = await Category.findById(req.params.id);
-
+    
+    if (!category) {
+      return res.json(ApiResponse({}, "Category not found", false));
+    }
 
       category.status = category.status == "ACTIVE" ? "INACTIVE" : "ACTIVE"
       await category.save();     
@@ -160,7 +163,7 @@ exports.toggleStatus = async (req, res) => {
 };
 
 
-// Delete a lesson
+// Delete a category
 exports.deleteCategory = async (req, res) => {
   try {
     const category = await Category.findByIdAndRemove(req.params.id);

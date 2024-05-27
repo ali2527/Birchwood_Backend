@@ -1,6 +1,8 @@
 const socketIO = require("socket.io");
 const User = require("../Models/User")
-const Coach = require("../Models/Teacher")
+const Coach = require("../Models/Teacher");
+const Teacher = require("../Models/Teacher");
+const Parent = require("../Models/Parent");
 
 
 let io; // Declare io as a global variable
@@ -39,18 +41,18 @@ function initializeWebSocket(server) {
       socket.on("new message", async (newMessageRecieved) => {
         var chat = newMessageRecieved.chatId;
   
-        if (newMessageRecieved.senderType == "user") {
-          newMessageRecieved.sender = await User.findById(
+        if (newMessageRecieved.senderType == "teacher") {
+          newMessageRecieved.sender = await Teacher.findById(
             newMessageRecieved.sender
           );
-          newMessageRecieved.reciever = await Coach.findById(
+          newMessageRecieved.reciever = await Parent.findById(
             newMessageRecieved.reciever
           );
         } else {
-          newMessageRecieved.sender = await Coach.findById(
+          newMessageRecieved.sender = await Parent.findById(
             newMessageRecieved.sender
           );
-          newMessageRecieved.reciever = await User.findById(
+          newMessageRecieved.reciever = await Teacher.findById(
             newMessageRecieved.reciever
           );
         }

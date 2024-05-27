@@ -4,12 +4,10 @@ const { ApiResponse } = require("../Helpers")
 
 //add Query Validator
 exports.addInventoryValidator = [
-  body('courseCode').not().isEmpty().withMessage("Course code is Required"),
   body('title').not().isEmpty().withMessage("Title is Required"),
-//   body('duration').not().isEmpty().withMessage("Course duration is Required"),
-  body('price').not().isEmpty().withMessage("Course price is Required"),
-
-  // body('features').isArray({ min: 1 }).withMessage("Atleast 1 feature is Required"),
+  body('description').not().isEmpty().withMessage("Inventory Description is Required"),
+  body('category').not().isEmpty().withMessage("Inventory Category is Required"),
+  body('description').not().isEmpty().withMessage("Inventory Description is Required"),
   function (req, res, next) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

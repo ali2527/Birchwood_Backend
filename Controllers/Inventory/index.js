@@ -12,6 +12,8 @@ const { ApiResponse } = require("../../Helpers/index");
 const { validateToken } = require("../../Helpers/index");
 const { generateString } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
+const {generateRandom6DigitID} = require("../../Helpers")
+
 const {
   sendNotificationToAdmin,
   sendNotificationToUser,
@@ -37,8 +39,12 @@ exports.addInventory = async (req, res) => {
     category,
   } = req.body;
 
+
+  let sku = await generateRandom6DigitID("I");
+
   try {
     const inventory = new Inventory({
+      sku,
       title,
       description,
       quantity,
@@ -48,7 +54,6 @@ exports.addInventory = async (req, res) => {
       lastAuditDate,
       notes,
       category,
-      image: req.files.image ? req.files.image[0].filename : "",
       gallery: req.files.gallery
         ? req.files.gallery.map((item) => item.filename)
         : "",
@@ -82,6 +87,11 @@ exports.getAllInventorys = async (req, res) => {
 
     let finalAggregate = [
       {
+        $sort: {
+          title: 1,
+        },
+      },
+      {
         $lookup: {
           from: "categories",
           localField: "category",
@@ -96,23 +106,18 @@ exports.getAllInventorys = async (req, res) => {
 
     if (req.query) {
       if (req.query.keyword) {
+        const regex = new RegExp(req.query.keyword.toLowerCase(), "i");
         finalAggregate.push({
           $match: {
             $or: [
-              {
-                title: {
-                  $regex: ".*" + req.query.keyword.toLowerCase() + ".*",
-                  $options: "i",
-                },
-                description: {
-                  $regex: ".*" + req.query.keyword.toLowerCase() + ".*",
-                  $options: "i",
-                },
-              },
+              { title: { $regex: regex } },
+              { description: { $regex: regex } },
             ],
           },
         });
       }
+
+
       if (req.query.category) {
         finalAggregate.push({
           $match: {
@@ -128,6 +133,10 @@ exports.getAllInventorys = async (req, res) => {
         });
       }
     }
+
+
+
+    console.log(finalAggregate)
 
     const myAggregate =
       finalAggregate.length > 0
@@ -165,7 +174,7 @@ exports.getInventoryByCategory = async (req, res) => {
     const inventorys = await Inventory.findOne({ category: req.params.id });
 
     if (!inventorys) {
-      return res.json(ApiResponse({}, "Inventorys not found", true));
+      return res.json(ApiResponse({}, "Inventory not found", true));
     }
 
     return res.json(ApiResponse({ inventorys }, "", true));
@@ -179,6 +188,12 @@ exports.updateInventory = async (req, res) => {
     let inventory = await Inventory.findById(req.params.id);
     let oldImages = req.body.oldImages ? JSON.parse(req.body.oldImages) : [];
     let allImages = [];
+
+
+    if (!inventory) {
+      return res.json(ApiResponse({}, "Inventory not found", true));
+    }
+
 
     inventory.title = req.body.title ? req.body.title : inventory.title || "";
     inventory.description = req.body.description
@@ -204,9 +219,9 @@ exports.updateInventory = async (req, res) => {
       ? req.body.category
       : inventory.category || "";
 
-    let temp = req.files.gallery
-      ? req.files.gallery.map((item) => item.filename)
-      : [];
+
+
+    let temp = req?.files?.gallery ? req.files.gallery.map((item) => item.filename) : [];
     allImages = [...inventory.gallery, ...temp];
 
     if (oldImages && oldImages.length > 0) {
@@ -235,6 +250,9 @@ exports.toggleStatus = async (req, res) => {
     
     let inventory = await Inventory.findById(req.params.id);
 
+    if (!inventory) {
+      return res.json(ApiResponse({}, "Inventory not found", false));
+    }
 
       inventory.status = inventory.status == "ACTIVE" ? "INACTIVE" : "ACTIVE"
       await inventory.save();     

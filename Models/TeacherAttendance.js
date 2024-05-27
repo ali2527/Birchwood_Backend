@@ -9,17 +9,14 @@ const teacherAttendanceSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "teacher",
     },
-    checkInDate: {
+    checkIn: {
       type: Date,
-      default: new Date(),
+      default: "",
     },
-    checkInTime: {
+   
+    checkOut: {
       type: Date,
-      default: new Date(),
-    },
-    checkOutTime: {
-      type: Date,
-      default: new Date(),
+      default: "",
     },
     leaveReason: {
       type: String,
@@ -29,10 +26,14 @@ const teacherAttendanceSchema = new Schema(
       type: String,
       default: "",
     },
+    leaveType:{
+      type: String,
+      enum: ["SICK", "CASUAL", "ANNUAL"],
+    },
     status: {
       type: String,
-      enum: ["PRESENT", "ABSENT", "LEAVE", "SICK", "HOLIDAY"],
-      default: "PRESENT",
+      enum: ["PRESENT", "ABSENT", "LEAVE", "HOLIDAY"],
+      default: "ABSENT",
     },
   },
   { timestamps: true }

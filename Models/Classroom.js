@@ -8,11 +8,18 @@ const classroomSchema = new Schema(
   {
     classroomId: {
       type: String,
-      unique: true,
-      default: generateRandom6DigitID('CL'),
+      unique: false,
     },
     classroomName: {
       type:String,
+      default: true,
+    }, 
+    classroomGrade: {
+      type:String,
+      default: true,
+    },
+    classroomBatch: {
+      type:Number,
       default: true,
     },
     description: {
@@ -23,10 +30,6 @@ const classroomSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "teacher",
     },
-    students: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "student",
-    }],
     status:{
         type:String,
         enum:["ACTIVE","INACTIVE"],

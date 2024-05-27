@@ -1,5 +1,5 @@
 //Models
-const Holiday = require("../../Models/TimeTable");
+const Holiday = require("../../Models/Holiday");
 const moment = require("moment");
 //Helpers
 const { generateToken } = require("../../Helpers/index");
@@ -39,7 +39,7 @@ exports.addHoliday = async (req, res) => {
 // Get All Holidays
 exports.getAllHolidays = async (req, res) => {
   try {
-    const holidays = await Holiday.findAll();
+    const holidays = await Holiday.find();
 
     return res.json(ApiResponse({ holidays }, "", true));
   } catch (error) {

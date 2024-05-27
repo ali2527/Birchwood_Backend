@@ -34,7 +34,7 @@ exports.signup = async (req, res) => {
         .json(ApiResponse({}, "Account with this Email Already Exist", false));
     }
 
-    let parentId = await generateRandom6DigitID("p");
+    let parentId = await generateRandom6DigitID("P");
     console.log("parentId",parentId)
 
     parent = new Parent({

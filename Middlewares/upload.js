@@ -20,7 +20,7 @@ const imageStorage = multer.diskStorage({
 
 const multiStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "Uploads/");
+    cb(null, "Uploads");
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);

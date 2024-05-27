@@ -15,7 +15,7 @@ const {
 
 // Add Timetable
 exports.addTimetable = async (req, res) => {
-    const { classroom, date, day, activities } = req.body;
+  const { classroom, startTime, endTime, day, description,subject, meta } = req.body;
   
     try {
       const newTimetable = new Timetable({
@@ -49,9 +49,16 @@ exports.addTimetable = async (req, res) => {
   // Get All Timetables
   exports.getAllClassTimetables = async (req, res) => {
     const { classroom } = req.params; // Assuming the classroom is in the URL parameters
+    const { day } = req.query; // Assuming day filter is in the query parameters
 
     try {
-      const timetables = await Timetable.find({ classroom });
+      // Fetch all timetables for the given classroom
+      let timetables = await Timetable.find({ classroom });
+  
+      // If a specific day is provided in the query, filter the timetables by that day
+      if (day) {
+        timetables = timetables.filter(timetable => timetable.day === day);
+      }
   
       // Group the timetables by day
       const timetablesByDay = timetables.reduce((groupedTimetables, timetable) => {
@@ -63,7 +70,7 @@ exports.addTimetable = async (req, res) => {
         return groupedTimetables;
       }, {});
   
-      return res.json(ApiResponse({ timetablesByDay }, "", true));
+      return res.json(ApiResponse({...timetablesByDay }, "", true));
     } catch (error) {
       return res.json(ApiResponse({}, error.message, false));
     }

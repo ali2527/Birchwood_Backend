@@ -9,38 +9,39 @@ const { ApiResponse } = require("../../Helpers/index");
 //libraries
 const dayjs = require("dayjs");
 const { default: mongoose } = require("mongoose");
+const Teacher = require("../../Models/Teacher");
+const Parent = require("../../Models/Parent");
 
 
 //create Chat
 exports.createChat = async (req, res) => {
-  const { student,coach } = req.body;
+  const { teacher,parent } = req.body;
   try {
 
-    let user = await User.findById(student)
+    let _teacher = await Teacher.findById(teacher)
 
-    if(!user){
+    if(!_teacher){
         return res
         .status(400)
-        .json(ApiResponse({},  "Student not Found",false));
+        .json(ApiResponse({},  "Teacher not Found",false));
     }
 
 
-    let _coach = await Coach.findById(coach)
+    let _parent = await Parent.findById(parent)
 
-    if(!_coach){
-        return res.json(ApiResponse({},  "Coach not Found",false));
+    if(!_parent){
+        return res.json(ApiResponse({},  "Parent not Found",false));
     }
 
 
-    let chat = await Chat.findOne({ student,coach });
+    let chat = await Chat.findOne({ teacher,parent });
 
     if (chat) {
       return res.json(ApiResponse(chat, "Chat Between these Two users already exists", true));
     }
 
     chat = new Chat({
-      student,
-      coach,
+      teacher,parent,
       status:"ACTIVE"
     });
 
@@ -69,20 +70,20 @@ exports.getMyChats = async (req, res) => {
       let finalAggregate = []
 
 
-        if(type == "student"){
+        if(type == "parent"){
 
           finalAggregate.push({
-            $match: {student: new mongoose.Types.ObjectId(req.user._id)}
+            $match: {parent: new mongoose.Types.ObjectId(req.user._id)}
           },
           {
             $lookup: {
-              from: "coaches",
-              localField: "coach",
+              from: "teachers",
+              localField: "teacher",
               foreignField: "_id",
-              as: "coach",
+              as: "teacher",
             },
           },{
-            $unwind:"$coach"
+            $unwind:"$teacher"
           })
 
           if (keyword) {
@@ -90,13 +91,13 @@ exports.getMyChats = async (req, res) => {
               $match: {
                 $or: [
                   {
-                    "coach.firstName": {
+                    "teacher.firstName": {
                       $regex: ".*" + keyword.toLowerCase() + ".*",
                       $options: "i",
                     },
                   },
                   {
-                    "coach.lastName": {
+                    "teacher.lastName": {
                       $regex: ".*" + keyword.toLowerCase() + ".*",
                       $options: "i",
                     },
@@ -108,17 +109,17 @@ exports.getMyChats = async (req, res) => {
         }else{
 
           finalAggregate.push({
-            $match: {coach: new mongoose.Types.ObjectId(req.user._id)}
+            $match: {teacher: new mongoose.Types.ObjectId(req.user._id)}
           },
           {
             $lookup: {
-              from: "users",
-              localField: "student",
+              from: "parents",
+              localField: "parent",
               foreignField: "_id",
-              as: "student",
+              as: "parent",
             },
           },{
-            $unwind:"$student"
+            $unwind:"$parent"
           })
 
           if (keyword) {
@@ -126,13 +127,13 @@ exports.getMyChats = async (req, res) => {
               $match: {
                 $or: [
                   {
-                    "student.firstName": {
+                    "parent.firstName": {
                       $regex: ".*" + keyword.toLowerCase() + ".*",
                       $options: "i",
                     },
                   },
                   {
-                    "student.lastName": {
+                    "parent.lastName": {
                       $regex: ".*" + keyword.toLowerCase() + ".*",
                       $options: "i",
                     },
@@ -159,9 +160,6 @@ exports.getMyChats = async (req, res) => {
           },
         });
        
-
-
-
     
         const myAggregate =
       finalAggregate.length > 0 ? Chat.aggregate(finalAggregate) : Chat.aggregate([]);

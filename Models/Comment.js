@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
-const mongoosePaginate = require("mongoose-paginate-v2");
+const mongoosePaginate = require("mongoose-paginate");
 const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 
 const commentSchema = new mongoose.Schema(
   {
-    title: {
+    content: {
       type: String,
       required: true,
     },

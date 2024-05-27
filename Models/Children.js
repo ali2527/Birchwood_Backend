@@ -28,7 +28,7 @@ const childSchema = new Schema(
       required: false,
     },
     age: {
-      type: String,
+      type: Number,
       required: false,
     },
     birthday: {
@@ -39,10 +39,7 @@ const childSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "parent",
     },
-    homeNumber:{
-      type: String,
-      required: true,
-    },
+
     allergies:{
       type: String,
       required: false,
@@ -63,7 +60,10 @@ const childSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "classroom",
     },
-   
+    checkIn: {
+      type: Boolean,
+      default: false,
+    },
     salt: String,
     status: {
       type: String,

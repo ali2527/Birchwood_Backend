@@ -119,6 +119,19 @@ const teacherSchema = new Schema(
       required: false,
       default:""
     },
+    checkIn: {
+      type: Boolean,
+      default: false,
+    },
+    checkOut: {
+      type: Boolean,
+      default: true,
+    },
+    bio: {
+      type: String,
+      required: false,
+      default:""
+    },
     employment:[employmentSchema],
     salt: String,
     status: {
@@ -152,10 +165,7 @@ teacherSchema
   teacherSchema.methods = {
     encryptPassword: function (password) {
       if (!password) return "";
-
-
       try {
-        
         return crypto
           .createHmac("sha1", this.salt)
           .update(password)

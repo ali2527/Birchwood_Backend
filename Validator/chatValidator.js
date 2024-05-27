@@ -5,8 +5,8 @@ const user = require("../Models/User")
 
 //signup Validator
 exports.createChatValidator = [
-  body('student').not().isEmpty().withMessage("Student ID is Required"),
-  body('coach').not().isEmpty().withMessage("Coach ID is Required"),
+  body('teacher').not().isEmpty().withMessage("Teacher ID is Required"),
+  body('parent').not().isEmpty().withMessage("Parent ID is Required"),
   function (req, res, next) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

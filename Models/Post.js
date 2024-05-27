@@ -1,13 +1,9 @@
 const mongoose = require("mongoose");
-const mongoosePaginate = require("mongoose-paginate-v2");
+const mongoosePaginate = require("mongoose-paginate");
 const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 
 const postSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      required: true,
-    },
     content: {
       type: String,
       required: true,
@@ -23,11 +19,11 @@ const postSchema = new mongoose.Schema(
       ref: "activity",
       required: true,
     },
-    child: {
+    children: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "children",
       required: false,
-    },
+    }],
 
     classroom: {
       type: mongoose.Schema.Types.ObjectId,

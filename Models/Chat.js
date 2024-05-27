@@ -13,13 +13,13 @@ const chatSchema = new Schema(
       type: Number,
       default: 0,
     },
-    student: {
+    teacher: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      ref: "teacher",
     },
-    coach: {
+    parent: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "coach",
+      ref: "parent",
     },
     latestMessage: {
       type: mongoose.Schema.Types.ObjectId,

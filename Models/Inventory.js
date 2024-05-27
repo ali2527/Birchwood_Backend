@@ -12,8 +12,7 @@ const inventorySchema = new Schema(
   {
     sku: {
       type: String,
-      unique: true,
-      default: generateRandom6DigitID('I'),
+      unique: false,
     },
     title:{
       type: String,

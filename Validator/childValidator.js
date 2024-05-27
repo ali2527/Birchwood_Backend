@@ -7,6 +7,8 @@ exports.addChildValidator = [
   body('rollNumber').not().isEmpty().withMessage("Roll Number is Required"),
   body('firstName').not().isEmpty().withMessage("First name is Required"),
   body('lastName').not().isEmpty().withMessage("Last name is Required"),
+  body('term').not().isEmpty().withMessage("Term is Required"),
+  body('birthday').not().isEmpty().withMessage("Birthday is Required"),
   body('age').not().isEmpty().withMessage("Age is Required"),
   body('classroom').not().isEmpty().withMessage("Class is Required"),
 

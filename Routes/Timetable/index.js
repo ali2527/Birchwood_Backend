@@ -9,6 +9,6 @@ router.post("/addTimetable",authenticatedRoute,addTimeTableValidator, addTimetab
 router.get("/getAllClassTimetables/:classroom",authenticatedRoute, getAllClassTimetables);
 router.get("/getTimetableByDayAndClass", authenticatedRoute,getTimetableByDayAndClass);
 router.post("/updateTimetable/:id", authenticatedRoute,updateTimetable);
-router.post("/deleteTimetable/:id", authenticatedRoute,deleteTimetable);
+router.get("/deleteTimetable/:id", authenticatedRoute,deleteTimetable);
 
 module.exports = router

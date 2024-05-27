@@ -12,10 +12,9 @@ const feeSchema = new Schema(
   {
     receiptNo: {
       type: String,
-      unique: true,
-      default: generateRandom6DigitID("F"),
+      unique: false,
     },
-    child: {
+    children: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "children",
     },
@@ -24,8 +23,8 @@ const feeSchema = new Schema(
       default: 0,
     },
     month: {
-      type: String,
-      default: "",
+      type: Number,
+      required: true,
     },
     year: {
       type: Number,
