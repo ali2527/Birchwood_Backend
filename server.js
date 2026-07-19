@@ -62,13 +62,8 @@ app.use(express.json());
 // }
 
 
-credentials = {
-    key: fs.readFileSync("./certs/ssl.key"),
-    cert: fs.readFileSync("./certs/ssl.crt"),
-    ca: fs.readFileSync("./certs/ca-bundle")
-  };
-
-// var httpsServer = https.createServer(credentials, app);
+// HTTP only for now — do not read certs on boot (missing certs crash the process → nginx 503).
+// To enable HTTPS later, load credentials then use https.createServer(credentials, app).
 var httpsServer = http.createServer(app);
 
 initializeWebSocket(httpsServer);
