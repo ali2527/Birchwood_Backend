@@ -1,0 +1,69 @@
+name: Deploy on live
+
+on:
+  push:
+    branches:
+      - live
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: live
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        env:
+          CI: "false"
+        with:
+          server: ${{ vars.SERVER }}
+          username: ${{ vars.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          force-pasv: true
+          protocol: ftp
+          port: 21
+          timeout: 120000
+          local-dir: ./
+          server-dir: /public_html/${{ vars.SERVER_DIR }}/
+          log-level: verbose
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github*/**
+            **/*.logs*/**
+            **/node_modules/**
+            **/Uploads/**
+            **/certs/**
+            **/.env
+            **/*.zip/**
+
+      - name: Install deps and restart PM2
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ vars.SERVER }}
+          username: ${{ vars.CPANEL_USERNAME }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: 22
+          script: |
+            cd ./public_html/${{ vars.SERVER_DIR }}/
+            npm install --legacy-peer-deps
+            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
+            pm2 save
+
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    environment: live
+    needs: deploy
+    steps:
+      - name: Check the deployed service URL
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: ${{ vars.DEPLOYMENT_URL }}
+          follow-redirect: false
+          max-attempts: 3
+          retry-delay: 5s
+          retry-all: false
