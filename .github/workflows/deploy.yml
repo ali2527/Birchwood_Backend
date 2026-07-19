@@ -14,31 +14,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Sync files via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        env:
-          CI: "false"
+      # SSH copy overwrites only transferred files; does not wipe the target folder.
+      # Excludes keep existing server dirs (Uploads, node_modules, certs) untouched.
+      - name: Sync files via SSH
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ vars.SERVER }}
-          username: ${{ vars.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          force-pasv: true
-          protocol: ftp
-          port: 21
-          timeout: 120000
-          local-dir: ./
-          server-dir: /public_html/${{ vars.SERVER_DIR }}/
-          log-level: verbose
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github*/**
-            **/*.logs*/**
-            **/node_modules/**
-            **/Uploads/**
-            **/certs/**
-            **/.env
-            **/*.zip/**
+          host: ${{ vars.SERVER }}
+          username: ${{ vars.CPANEL_USERNAME }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: 22
+          source: ".,!.git,!.github,!node_modules,!Uploads,!certs,!.env,!*.zip,!*.log"
+          target: ./public_html/${{ vars.SERVER_DIR }}/
+          overwrite: true
+          rm: false
 
       - name: Install deps and restart PM2
         uses: appleboy/ssh-action@v1.1.0
