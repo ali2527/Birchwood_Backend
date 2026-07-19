@@ -37,7 +37,6 @@ jobs:
             **/node_modules/**
             **/Uploads/**
             **/certs/**
-            **/.env
             **/*.zip/**
 
       - name: Install deps and restart PM2
