@@ -43,8 +43,8 @@ jobs:
             pm2 save
             sleep 3
             pm2 status
-            if ! curl -fsS "http://127.0.0.1:8201/api/health"; then
-              echo "App not healthy on :8201 — recent logs:"
+            if ! curl -fsS "http://127.0.0.1:3031/api/health"; then
+              echo "App not healthy on :3031 — recent logs:"
               pm2 logs birchwood-backend --lines 80 --nostream || true
               exit 1
             fi

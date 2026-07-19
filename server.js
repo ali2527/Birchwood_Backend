@@ -94,7 +94,8 @@ app.get("/", (req, res) => {
   res.send("Birchwood Server Running");
 });
 
-httpsServer.listen(8201, () => {
-  console.log(`Listening on port ${8201}`); 
+const PORT = process.env.PORT || 3031;
+httpsServer.listen(PORT, () => {
+  console.log(`Listening on port ${PORT}`);
 });
 
