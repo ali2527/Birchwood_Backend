@@ -1,0 +1,13 @@
+node_modules/
+npm-debug.log
+.DS_Store
+.env
+Uploads/*
+!Uploads/.gitkeep
+certs/
+*.pem
+*.key
+*.p12
+.idea/
+.vscode/
+*.log
