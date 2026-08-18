@@ -46,6 +46,10 @@ app.use(cors(corsOptions));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "2mb" }));
 
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 const limiter = rateLimit({
   max: 2000,
   windowMs: 15 * 60 * 1000,
@@ -63,5 +67,13 @@ app.get("/", (req, res) => {
 });
 
 http.createServer(app).listen(PORT, () => {
-  console.log(`Listening on port ${PORT}`);
+  const env = process.env.NODE_ENV || "development";
+  const version = process.env.VERSION || "1.0.0";
+  const baseUrl = `http://localhost:${PORT}`;
+
+  console.log("Birchwood API started");
+  console.log(`  environment : ${env}`);
+  console.log(`  version     : ${version}`);
+  console.log(`  listening   : ${baseUrl}`);
+  console.log(`  health      : ${baseUrl}/api/health`);
 });
