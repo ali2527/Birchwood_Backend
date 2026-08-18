@@ -67,22 +67,14 @@ app.get("/", (req, res) => {
   res.send("Birchwood Server Running");
 });
 
-const port = Number(process.env.PORT) || 3031;
-const useHttps = process.env.USE_HTTPS === "true";
+http.createServer(app).listen(PORT, () => {
+  const env = process.env.NODE_ENV || "development";
+  const version = process.env.VERSION || "1.0.0";
+  const baseUrl = `http://localhost:${PORT}`;
 
-let server;
-
-if (useHttps) {
-  const credentials = {
-    key: fs.readFileSync("./certs/ssl.key"),
-    cert: fs.readFileSync("./certs/ssl.crt"),
-    ca: fs.readFileSync("./certs/ca-bundle"),
-  };
-  server = https.createServer(credentials, app);
-} else {
-  server = http.createServer(app);
-}
-
-server.listen(port, () => {
-  console.log(`Listening on port ${port} (${useHttps ? "https" : "http"})`);
+  console.log("Birchwood API started");
+  console.log(`  environment : ${env}`);
+  console.log(`  version     : ${version}`);
+  console.log(`  listening   : ${baseUrl}`);
+  console.log(`  health      : ${baseUrl}/api/health`);
 });
