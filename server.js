@@ -2,6 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const helmet = require("helmet");
+const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const morgan = require("morgan");
@@ -43,16 +44,8 @@ app.use(
   })
 );
 app.use(cors(corsOptions));
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(morgan(process.env.NODE_ENV === "production" || process.env.NODE_ENV === "live" ? "combined" : "dev"));
 app.use(express.json({ limit: "2mb" }));
-
-const credentials = {
-  key: fs.readFileSync("./certs/ssl.key"),
-  cert: fs.readFileSync("./certs/ssl.crt"),
-  ca: fs.readFileSync("./certs/ca-bundle"),
-};
-
-const httpsServer = https.createServer(credentials, app);
 
 const limiter = rateLimit({
   max: 2000,
@@ -70,6 +63,22 @@ app.get("/", (req, res) => {
   res.send("Birchwood Server Running");
 });
 
-httpsServer.listen(8201, () => {
-  console.log("Listening on port 8201");
+const port = Number(process.env.PORT) || 3031;
+const useHttps = process.env.USE_HTTPS === "true";
+
+let server;
+
+if (useHttps) {
+  const credentials = {
+    key: fs.readFileSync("./certs/ssl.key"),
+    cert: fs.readFileSync("./certs/ssl.crt"),
+    ca: fs.readFileSync("./certs/ca-bundle"),
+  };
+  server = https.createServer(credentials, app);
+} else {
+  server = http.createServer(app);
+}
+
+server.listen(port, () => {
+  console.log(`Listening on port ${port} (${useHttps ? "https" : "http"})`);
 });
