@@ -1,30 +1,24 @@
-//Models
 const Parent = require("../../Models/Parent");
-const Coach = require("../../Models/Teacher");
-const Lesson = require("../../Models/Lesson");
-const Payment = require("../../Models/Payment");
-const Reset = require("../../Models/Reset");
-
-//Helpers
-const { generateToken } = require("../../Helpers/index");
-const { ApiResponse } = require("../../Helpers/index");
-const { validateToken } = require("../../Helpers/index");
-const {generateRandom6DigitID} = require("../../Helpers")
-const { generateString } = require("../../Helpers/index");
-const { errorHandler } = require("../../Helpers/errorHandler");
-const { generateEmail } = require("../../Helpers/email");
-const {sendNotificationToUser, sendNotificationToAdmin} = require("../../Helpers/notification")
+const { generateToken, ApiResponse, generateRandom6DigitID, pick } = require("../../Helpers/index");
+const { sendNotificationToAdmin } = require("../../Helpers/notification");
 const sanitizeUser = require("../../Helpers/sanitizeUser");
-const {
-  createResetToken,
-  validateResetToken,
-} = require("../../Helpers/verification");
 
+const PARENT_SIGNUP_FIELDS = [
+  "fatherFirstName",
+  "fatherLastName",
+  "motherFirstName",
+  "motherLastName",
+  "email",
+  "phone",
+  "password",
+  "address",
+  "city",
+  "state",
+  "image",
+];
 
-//signup
 exports.signup = async (req, res) => {
-  // return;
-  const {email} = req.body;
+  const { email } = req.body;
   try {
     let parent = await Parent.findOne({ email });
 
@@ -34,29 +28,33 @@ exports.signup = async (req, res) => {
         .json(ApiResponse({}, "Account with this Email Already Exist", false));
     }
 
-    let parentId = await generateRandom6DigitID("P");
-    console.log("parentId",parentId)
+    const parentId = generateRandom6DigitID("P");
 
     parent = new Parent({
-      ...req.body,
-      parentId
+      ...pick(req.body, PARENT_SIGNUP_FIELDS),
+      parentId,
+      isAdmin: false,
     });
 
     await parent.save();
 
-    const title ="New Account Signup"
-    const content = `A new user has signed up on the app. Email : ${email}`
-    sendNotificationToAdmin(title,content)   
+    sendNotificationToAdmin(
+      "New Account Signup",
+      `A new user has signed up on the app. Email : ${email}`
+    );
 
-    return res
-      .status(200)
-      .json(ApiResponse({ parent }, "Account Created Successfully", true));
+    return res.status(200).json(
+      ApiResponse(
+        { parent: sanitizeUser(parent) },
+        "Account Created Successfully",
+        true
+      )
+    );
   } catch (error) {
     return res.status(500).json(ApiResponse({}, error.message, false));
   }
 };
 
-//signin
 exports.signin = async (req, res) => {
   let { email, password } = req.body;
   email = email.toLowerCase(); // Convert email to lowercase
@@ -96,5 +94,3 @@ exports.signin = async (req, res) => {
     return res.status(500).json(ApiResponse({}, error.message, false));
   }
 };
-
-

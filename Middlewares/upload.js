@@ -1,51 +1,51 @@
 const path = require("path");
+const crypto = require("crypto");
 const multer = require("multer");
 const { ApiResponse } = require("../Helpers");
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
+const VIDEO_TYPES = [
+  "video/mp4",
+  "video/mpeg",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-flv",
+  "video/x-matroska",
+  "video/webm",
+];
+
+const uniqueName = (originalname) =>
+  `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${path.extname(originalname)}`;
 
 const imageStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "Uploads/");
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    
-    req.body.image = uniqueSuffix + path.extname(file.originalname);
-
-
- 
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    const filename = uniqueName(file.originalname);
+    req.body.image = filename;
+    cb(null, filename);
   },
 });
-
 
 const multiStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "Uploads");
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueName(file.originalname));
   },
 });
 
+const limits = { fileSize: 15 * 1024 * 1024 };
+
 exports.uploadFile = function (req, res, next) {
-  
-  var upload = multer({
+  const upload = multer({
     storage: imageStorage,
+    limits,
     fileFilter: (req, file, cb) => {
-     
-      
-      if (
-        file.mimetype === "image/png" ||
-        file.mimetype === "image/jpeg" ||
-        file.mimetype === "image/jpg" ||
-        file.mimetype === "image/gif" ||
-        file.mimetype === "image/webop"
-      ) {
+      if (IMAGE_TYPES.includes(file.mimetype)) {
         cb(null, true);
-      } else if (!file) {
-        cb(null, false);
-        next();
       } else {
         cb(new Error("Image File Type not Allowed"), false);
       }
@@ -60,48 +60,20 @@ exports.uploadFile = function (req, res, next) {
   });
 };
 
+const wrapUpload = (uploader) => (req, res, next) => {
+  uploader(req, res, (err) => {
+    if (err) {
+      return res.json(ApiResponse({}, err.message, false));
+    }
+    next();
+  });
+};
+
 const uploadMultiple = multer({
   storage: multiStorage,
+  limits,
   fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === "image/png" ||
-      file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/jpg" ||
-      file.mimetype === "image/gif" ||
-        file.mimetype === "video/mp4" ||
-          file.mimetype === "video/mpeg" ||
-          file.mimetype === "video/quicktime" ||
-          file.mimetype === "video/x-msvideo" ||
-          file.mimetype === "video/x-flv" ||
-          file.mimetype === "video/x-matroska" ||
-          file.mimetype === "video/webm"
-    ) {
-      cb(null, true);
-    } else {
-      // cb(new Error("File type not allowed"), false);
-      cb(null, true);
-    }
-  },
-});
-
-exports.uploadMultiple = uploadMultiple.fields([{ name: "image", maxCount: 10 }, { name: "video", maxCount: 10 }]);
-
-const uploadProduct = multer({
-  storage: multiStorage,
-  fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === "image/png" ||
-      file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/jpg" ||
-      file.mimetype === "image/gif" ||
-        file.mimetype === "video/mp4" ||
-          file.mimetype === "video/mpeg" ||
-          file.mimetype === "video/quicktime" ||
-          file.mimetype === "video/x-msvideo" ||
-          file.mimetype === "video/x-flv" ||
-          file.mimetype === "video/x-matroska" ||
-          file.mimetype === "video/webm"
-    ) {
+    if (IMAGE_TYPES.includes(file.mimetype) || VIDEO_TYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error("File type not allowed"), false);
@@ -109,4 +81,28 @@ const uploadProduct = multer({
   },
 });
 
-exports.uploadProduct = uploadProduct.fields([{ name: "image", maxCount: 1 }, { name: "gallery", maxCount: 10 }]);
+exports.uploadMultiple = wrapUpload(
+  uploadMultiple.fields([
+    { name: "image", maxCount: 10 },
+    { name: "video", maxCount: 10 },
+  ])
+);
+
+const uploadProduct = multer({
+  storage: multiStorage,
+  limits,
+  fileFilter: (req, file, cb) => {
+    if (IMAGE_TYPES.includes(file.mimetype) || VIDEO_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("File type not allowed"), false);
+    }
+  },
+});
+
+exports.uploadProduct = wrapUpload(
+  uploadProduct.fields([
+    { name: "image", maxCount: 1 },
+    { name: "gallery", maxCount: 10 },
+  ])
+);

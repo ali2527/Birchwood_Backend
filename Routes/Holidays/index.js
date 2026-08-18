@@ -1,13 +1,17 @@
-const express = require("express")
-const {addHoliday,getAllHolidays,updateHoliday,deleteHoliday} = require("../../Controllers/Holiday");
-const router = express.Router()
-const { authenticatedRoute,adminRoute } = require("../../Middlewares/auth")
-const { uploadFile } = require("../../Middlewares/upload")
-const {addHolidayValidator} = require("../../Validator/holidayValidator")
+const express = require("express");
+const {
+  addHoliday,
+  getAllHolidays,
+  updateHoliday,
+  deleteHoliday,
+} = require("../../Controllers/Holiday");
+const router = express.Router();
+const { authenticatedRoute, adminRoute } = require("../../Middlewares/auth");
+const { addHolidayValidator } = require("../../Validator/holidayValidator");
 
-router.post("/addHoliday",authenticatedRoute,addHolidayValidator, addHoliday);
-router.get("/getAllHolidays",authenticatedRoute, getAllHolidays);
-router.post("/updateHoliday/:id", authenticatedRoute,updateHoliday);
-router.post("/deleteHoliday/:id", authenticatedRoute,deleteHoliday);
+router.post("/addHoliday", adminRoute, addHolidayValidator, addHoliday);
+router.get("/getAllHolidays", authenticatedRoute, getAllHolidays);
+router.post("/updateHoliday/:id", adminRoute, updateHoliday);
+router.post("/deleteHoliday/:id", adminRoute, deleteHoliday);
 
-module.exports = router
+module.exports = router;

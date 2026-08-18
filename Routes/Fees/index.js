@@ -1,4 +1,4 @@
- const express = require("express");
+const express = require("express");
 const {
   createVoucher,
   getAllVouchers,
@@ -10,16 +10,14 @@ const {
 } = require("../../Controllers/Fees");
 const router = express.Router();
 const { authenticatedRoute, adminRoute } = require("../../Middlewares/auth");
-const {createVoucherValidator} = require("../../Validator/feesValidator")
+const { createVoucherValidator } = require("../../Validator/feesValidator");
 
-
-router.post("/createVoucher", authenticatedRoute,createVoucherValidator, createVoucher);
-router.get("/getAllVouchers",authenticatedRoute, getAllVouchers);
+router.post("/createVoucher", adminRoute, createVoucherValidator, createVoucher);
+router.get("/getAllVouchers", authenticatedRoute, getAllVouchers);
 router.get("/getVoucherById/:id", authenticatedRoute, getVoucherById);
 router.get("/getAllChildVouchers/:id", authenticatedRoute, getAllChildVouchers);
-router.post("/updateVoucher/:id", authenticatedRoute, updateVoucher);
-router.get("/toggleStatus/:id",authenticatedRoute,toggleStatus);
-router.get("/deleteVoucher/:id", authenticatedRoute, deleteVoucher);
-
+router.post("/updateVoucher/:id", adminRoute, updateVoucher);
+router.get("/toggleStatus/:id", adminRoute, toggleStatus);
+router.get("/deleteVoucher/:id", adminRoute, deleteVoucher);
 
 module.exports = router;

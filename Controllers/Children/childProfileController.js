@@ -1,63 +1,55 @@
-//Models
 const Parent = require("../../Models/Parent");
 const Children = require("../../Models/Children");
-
-//Helpers
+const moment = require("moment");
 const { ApiResponse } = require("../../Helpers/index");
-const { validateToken } = require("../../Helpers/index");
-const { generateString } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
-const { generateEmail } = require("../../Helpers/email");
-const sanitizeUser = require("../../Helpers/sanitizeUser");
-const { sendNotificationToAdmin,sendNotificationToUser } = require("../../Helpers/notification");
-const { sendChildAssignmentNotification } = require("../../Helpers/sockets");
 const fs = require("fs");
-const path = require('path');
+const path = require("path");
 
-
-//get user
 exports.assignChild = async (req, res) => {
-    try {
-      // Find the child by ID
-      const child = await Children.findById(req.body.child);
-  
-      if (!child) {
-        return res.status(200).json(ApiResponse({}, "Child not Found", true));
-      }
-  
-      // Check if the child already has a parent assigned
-      if (child.parent) {
-        return res.status(400).json(ApiResponse({}, "Child already has a parent assigned", true));
-      }
-  
-      // Find the parent by ID (req.user._id)
-      const parent = await Parent.findById(req.user._id);
-  
-      if (!parent) {
-        return res.status(200).json(ApiResponse({}, "Parent not Found", true));
-      }
-  
-      // Add the child to the parent's childrens array
-      parent.childrens.push(child._id);
-  
-      // Add the parent to the child's parent field
-      child.parent = parent._id;
-  
+  try {
+    const rollNumber = String(req.body.rollNumber || "").trim();
+    const birthday = req.body.birthday;
 
-         // Send notification to the parent socket
-         sendChildAssignmentNotification(parent._id, child);
-
-      
-      // Save changes to both parent and child
-      await parent.save();
-      await child.save();
-  
-      return res.status(200).json(ApiResponse({}, "Child assigned successfully", false));
-  
-    } catch (error) {
-      return res.status(500).json(ApiResponse({}, error.message, false));
+    const parent = await Parent.findById(req.user._id);
+    if (!parent) {
+      return res.status(400).json(ApiResponse({}, "Parent not Found", false));
     }
-  };
+
+    const child = await Children.findOne({ rollNumber });
+    const birthdayMatches =
+      child &&
+      child.birthday &&
+      moment(birthday).isValid() &&
+      moment(child.birthday).isSame(moment(birthday), "day");
+
+    if (!child || !birthdayMatches) {
+      return res
+        .status(400)
+        .json(ApiResponse({}, "Child details do not match", false));
+    }
+
+    if (child.parent) {
+      return res
+        .status(400)
+        .json(ApiResponse({}, "Child already has a parent assigned", false));
+    }
+
+    if (!parent.childrens.includes(child._id)) {
+      parent.childrens.push(child._id);
+    }
+    child.parent = parent._id;
+
+    await parent.save();
+    await child.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse({ child }, "Child assigned successfully", true));
+  } catch (error) {
+    return res.status(500).json(ApiResponse({}, error.message, false));
+  }
+};
 
 //update user
 // exports.updateProfile = async (req, res) => {
@@ -157,7 +149,7 @@ exports.removeChild = async (req, res) => {
       await parent.save();
       await child.save();
   
-      return res.status(200).json(ApiResponse({}, "Child removed successfully", false));
+      return res.status(200).json(ApiResponse({}, "Child removed successfully", true));
   
     } catch (error) {
       return res.status(500).json(ApiResponse({}, error.message, false));

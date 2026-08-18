@@ -1,4 +1,4 @@
- const express = require("express");
+const express = require("express");
 const {
   addCategory,
   getAllcategories,
@@ -9,15 +9,13 @@ const {
 } = require("../../Controllers/Category");
 const router = express.Router();
 const { authenticatedRoute, adminRoute } = require("../../Middlewares/auth");
-const {addCategoryValidator} = require("../../Validator/categoryValidator")
+const { addCategoryValidator } = require("../../Validator/categoryValidator");
 
-
-router.post("/addCategory", authenticatedRoute,addCategoryValidator, addCategory);
+router.post("/addCategory", adminRoute, addCategoryValidator, addCategory);
 router.get("/getAllcategories", getAllcategories);
 router.get("/getCategoryById/:id", authenticatedRoute, getCategoryById);
-router.post("/updateCategory/:id", authenticatedRoute, updateCategory);
-router.get("/toggleStatus/:id",authenticatedRoute,toggleStatus);
-router.get("/deleteCategory/:id", authenticatedRoute, deleteCategory);
-
+router.post("/updateCategory/:id", adminRoute, updateCategory);
+router.get("/toggleStatus/:id", adminRoute, toggleStatus);
+router.get("/deleteCategory/:id", adminRoute, deleteCategory);
 
 module.exports = router;

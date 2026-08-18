@@ -1,12 +1,10 @@
 const mongoose = require("mongoose");
-const { createHmac } = require('node:crypto');
-const mongoosePaginate = require('mongoose-paginate');
+const mongoosePaginate = require("mongoose-paginate");
 const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 const Schema = mongoose.Schema;
 const crypto = require("crypto");
-const { token } = require("morgan");
-const { v4: uuidv4 } = require('uuid');
-const {generateRandom6DigitID} = require("../Helpers")
+const bcrypt = require("bcrypt");
+const { v4: uuidv4 } = require("uuid");
 
 
 const educationSchema = new mongoose.Schema({
@@ -127,6 +125,11 @@ const teacherSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    bio: {
+      type: String,
+      required: false,
+      default:""
+    },
     employment:[employmentSchema],
     salt: String,
     status: {
@@ -149,40 +152,32 @@ const teacherSchema = new Schema(
 teacherSchema
   .virtual("password")
   .set(function (password) {
-      console.log("password>>>>",password)
     this._password = password;
     this.salt = uuidv4();
-    this.hashed_password = this.encryptPassword(password);
-        console.log("Generated hashed password:", this.hashed_password);
-
+    this.hashed_password = bcrypt.hashSync(password, 10);
   })
   .get(function () {
     return this._password;
   });
 
-  teacherSchema.methods = {
-     encryptPassword: function (password) {
-         console.log()
-      if (!password) return "";
-
-         try {
-        
-        return crypto
-          .createHmac("sha1", this.salt)
-          .update(password)
-          .digest("hex");
-      } catch (err) {
-        console.log(err.message);
-        return "";
-      }
-    },
-    authenticate: function (plainText) {
-                console.log("0>>>>",plainText)
-        console.log("1>>>>",this.hashed_password)
-        console.log("2>>>>",this.encryptPassword(plainText))
-      return this.encryptPassword(plainText) === this.hashed_password;
-    },
-  };
+teacherSchema.methods = {
+  encryptPassword: function (password) {
+    if (!password) return "";
+    try {
+      return crypto.createHmac("sha1", this.salt).update(password).digest("hex");
+    } catch (err) {
+      console.log(err.message);
+      return "";
+    }
+  },
+  authenticate: function (plainText) {
+    if (!this.hashed_password) return false;
+    if (this.hashed_password.startsWith("$2")) {
+      return bcrypt.compareSync(plainText, this.hashed_password);
+    }
+    return this.encryptPassword(plainText) === this.hashed_password;
+  },
+};
 
 teacherSchema.plugin(mongoosePaginate);
 teacherSchema.plugin(aggregatePaginate);

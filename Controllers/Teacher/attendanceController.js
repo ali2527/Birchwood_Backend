@@ -3,7 +3,6 @@ const Children = require("../../Models/Children");
 const Attendance = require("../../Models/TeacherAttendance");
 const fs = require("fs");
 const crypto = require("crypto");
-const KJUR = require("jsrsasign");
 const moment = require("moment");
 //Helpers 
 const { generateToken } = require("../../Helpers/index");
