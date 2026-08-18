@@ -1,4 +1,5 @@
 const Parent = require("../../Models/Parent");
+const Children = require("../../Models/Children");
 const { ApiResponse, pick } = require("../../Helpers/index");
 const sanitizeUser = require("../../Helpers/sanitizeUser");
 const fs = require("fs");
@@ -76,6 +77,46 @@ exports.changePassword = async (req, res) => {
     return res
       .status(201)
       .json(ApiResponse({}, "Password Updated Successfully", true));
+  } catch (error) {
+    return res.status(500).json(ApiResponse({}, error.message, false));
+  }
+};
+
+exports.getAllMyChildren = async (req, res) => {
+  try {
+    const parent = await Parent.findById(req.user._id).populate({
+      path: "childrens",
+      populate: { path: "classroom" },
+    });
+
+    if (!parent) {
+      return res.status(400).json(ApiResponse({}, "Parent not Found", false));
+    }
+
+    return res
+      .status(200)
+      .json(ApiResponse({ children: parent.childrens }, "Children found", true));
+  } catch (error) {
+    return res.status(500).json(ApiResponse({}, error.message, false));
+  }
+};
+
+exports.getChildProfileById = async (req, res) => {
+  try {
+    const child = await Children.findById(req.params.id).populate("classroom");
+
+    if (!child) {
+      return res.status(404).json(ApiResponse({}, "Child not found", false));
+    }
+
+    const isAssigned =
+      child.parent && String(child.parent) === String(req.user._id);
+
+    if (!isAssigned) {
+      return res.status(403).json(ApiResponse({}, "Access Forbidden", false));
+    }
+
+    return res.status(200).json(ApiResponse({ child }, "Child found", true));
   } catch (error) {
     return res.status(500).json(ApiResponse({}, error.message, false));
   }
