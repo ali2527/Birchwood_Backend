@@ -45,7 +45,12 @@ app.use(
   })
 );
 app.use(cors(corsOptions));
-app.use(morgan(process.env.NODE_ENV === "production" || process.env.NODE_ENV === "live" ? "combined" : "dev"));
+
+morgan.token("remote-addr", (req) => {
+  const addr = req.ip || (req.socket && req.socket.remoteAddress) || "";
+  return addr.replace(/^::ffff:/i, "");
+});
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/api/health", (req, res) => {
@@ -65,7 +70,13 @@ app.use("/Uploads", express.static("./Uploads"));
 app.use("/api", require("./Routes/index"));
 
 app.get("/", (req, res) => {
-  res.send("Birchwood Server Running");
+  res.status(200).json({
+    name: "Birchwood API",
+    status: "running",
+    environment: process.env.NODE_ENV || "development",
+    version: process.env.VERSION || "1.0.0",
+    health: "/api/health",
+  });
 });
 
 http.createServer(app).listen(PORT, () => {
