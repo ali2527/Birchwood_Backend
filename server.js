@@ -15,8 +15,35 @@ if (!process.env.JWT_SECRET) {
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3031;
+const mongoose = require("./config/db");
 
-require("./config/db");
+function getServiceInfo() {
+  const dbStates = ["disconnected", "connected", "connecting", "disconnecting"];
+  const environment = process.env.NODE_ENV || "development";
+  const version = process.env.VERSION || "1.0.0";
+  const dbStatus = dbStates[mongoose.connection.readyState] || "unknown";
+
+  return {
+    name: "Birchwood Academy API",
+    status: "running",
+    message: `Birchwood Academy API is running in ${environment} (v${version}), database ${dbStatus}`,
+    environment,
+    version,
+    port: PORT,
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    node: process.version,
+    database: {
+      status: dbStatus,
+      connected: mongoose.connection.readyState === 1,
+    },
+    endpoints: {
+      root: "/",
+      health: "/api/health",
+      api: "/api",
+    },
+  };
+}
 
 const allowedOrigins = (process.env.CORS_ORIGIN || "*")
   .split(",")
@@ -54,7 +81,7 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+  res.status(200).json(getServiceInfo());
 });
 
 const limiter = rateLimit({
@@ -70,23 +97,11 @@ app.use("/Uploads", express.static("./Uploads"));
 app.use("/api", require("./Routes/index"));
 
 app.get("/", (req, res) => {
-  res.status(200).json({
-    name: "Birchwood API",
-    status: "running",
-    environment: process.env.NODE_ENV || "development",
-    version: process.env.VERSION || "1.0.0",
-    health: "/api/health",
-  });
+  res.status(200).json(getServiceInfo());
 });
 
 http.createServer(app).listen(PORT, () => {
   const env = process.env.NODE_ENV || "development";
   const version = process.env.VERSION || "1.0.0";
   const baseUrl = `http://localhost:${PORT}`;
-
-  console.log("Birchwood API started");
-  console.log(`  environment : ${env}`);
-  console.log(`  version     : ${version}`);
-  console.log(`  listening   : ${baseUrl}`);
-  console.log(`  health      : ${baseUrl}/api/health`);
 });

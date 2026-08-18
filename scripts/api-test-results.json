@@ -7,7 +7,7 @@
       "method": "GET",
       "url": "/",
       "ok": true,
-      "detail": "200 Birchwood Server Running"
+      "detail": "200 Birchwood Academy API is running in development (v1.0.0), database connected"
     },
     {
       "name": "signup missing fields",
