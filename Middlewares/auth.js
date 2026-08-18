@@ -1,13 +1,14 @@
 const jwt = require("jsonwebtoken");
 const Parent = require("../Models/Parent");
 const Teacher = require("../Models/Teacher");
-const { ApiResponse } = require("../Helpers");
+const Admin = require("../Models/Admin");
+const { ApiResponse, verifyAdminToken, ADMIN_TOKEN_TYPE } = require("../Helpers");
 require("dotenv").config();
 
 const getToken = (req) =>
   req.headers.authorization || req.body.token || req.query.token;
 
-const verifyToken = (token) =>
+const verifyUserToken = (token) =>
   jwt.verify(String(token).replace("Bearer ", ""), process.env.JWT_SECRET);
 
 exports.authenticatedRoute = async (req, res, next) => {
@@ -18,7 +19,28 @@ exports.authenticatedRoute = async (req, res, next) => {
   }
 
   try {
-    const decoded = verifyToken(token);
+    try {
+      const adminDecoded = verifyAdminToken(token);
+      if (adminDecoded.tokenType === ADMIN_TOKEN_TYPE && adminDecoded.role === "admin") {
+        const admin = await Admin.findById(adminDecoded._id);
+        if (admin && admin.status === "ACTIVE") {
+          req.user = admin;
+          req.admin = admin;
+          req.isAdmin = true;
+          req.userRole = "admin";
+          return next();
+        }
+      }
+    } catch (adminErr) {
+      // Not a valid admin token; try parent/teacher token next.
+    }
+
+    const decoded = verifyUserToken(token);
+
+    if (decoded.tokenType === ADMIN_TOKEN_TYPE || decoded.role === "admin") {
+      return res.status(401).json(ApiResponse({}, "Unauthorized Access", false));
+    }
+
     const parent = await Parent.findById(decoded._id);
     const teacher = await Teacher.findById(decoded._id);
 
@@ -27,8 +49,8 @@ exports.authenticatedRoute = async (req, res, next) => {
     }
 
     req.user = parent || teacher;
-    req.isAdmin = Boolean(parent && parent.isAdmin);
-    req.userRole = req.isAdmin ? "admin" : parent ? "parent" : "teacher";
+    req.isAdmin = false;
+    req.userRole = parent ? "parent" : "teacher";
     next();
   } catch (err) {
     return res
@@ -45,20 +67,26 @@ exports.adminRoute = async (req, res, next) => {
   }
 
   try {
-    const decoded = verifyToken(token);
-    const user = await Parent.findById(decoded._id);
+    const decoded = verifyAdminToken(token);
 
-    if (!user || !user.isAdmin) {
+    if (decoded.tokenType !== ADMIN_TOKEN_TYPE || decoded.role !== "admin") {
       return res.status(401).json(ApiResponse({}, "Unauthorized Access", false));
     }
 
-    req.user = user;
+    const admin = await Admin.findById(decoded._id);
+
+    if (!admin || admin.status !== "ACTIVE") {
+      return res.status(401).json(ApiResponse({}, "Unauthorized Access", false));
+    }
+
+    req.user = admin;
+    req.admin = admin;
     req.isAdmin = true;
     req.userRole = "admin";
     next();
   } catch (err) {
     return res
       .status(401)
-      .json(ApiResponse({}, "Invalid Token, Please sign in again", false));
+      .json(ApiResponse({}, "Invalid admin token, Please sign in again", false));
   }
 };

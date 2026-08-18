@@ -22,6 +22,7 @@ router.use("/category", require("./Category"));
 router.use("/holiday", require("./Holidays"));
 router.use("/homework", require("./Homework"));
 
+router.use("/admin/auth", require("./Admin/AdminAuth"));
 router.use("/admin/teacher", require("./Admin/AdminTeacher"));
 router.use("/admin/children", require("./Admin/AdminChildren"));
 

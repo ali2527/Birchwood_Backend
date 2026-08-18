@@ -5,6 +5,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const Parent = require("../Models/Parent");
 const Teacher = require("../Models/Teacher");
+const Admin = require("../Models/Admin");
 
 const BASE = `http://localhost:${process.env.PORT || 3031}`;
 const stamp = Date.now();
@@ -91,19 +92,17 @@ function pngForm(fields = {}) {
 
 async function seedAdmin() {
   await mongoose.connect(process.env.DB);
-  const existing = await Parent.findOne({ email: adminEmail });
+  const existing = await Admin.findOne({ email: adminEmail });
   if (existing) {
+    existing.password = PASSWORD;
     existing.isAdmin = true;
     existing.status = "ACTIVE";
     await existing.save();
   } else {
-    const admin = new Parent({
-      fatherFirstName: "Admin",
-      fatherLastName: "User",
-      motherFirstName: "Admin",
-      motherLastName: "User",
+    const admin = new Admin({
+      firstName: "Admin",
+      lastName: "User",
       email: adminEmail,
-      phone: "03001234567",
       password: PASSWORD,
       isAdmin: true,
       status: "ACTIVE",
@@ -153,7 +152,7 @@ async function run() {
   });
   parentToken = parentSignin.body?.data?.token || "";
 
-  const adminSignin = await test("admin signin", "POST", "/api/auth/signin", {
+  const adminSignin = await test("admin signin", "POST", "/api/admin/auth/signin", {
     json: { email: adminEmail, password: PASSWORD },
   });
   adminToken = adminSignin.body?.data?.token || "";

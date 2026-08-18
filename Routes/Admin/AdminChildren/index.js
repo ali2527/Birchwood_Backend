@@ -11,12 +11,12 @@ const {
 const router = express.Router();
 const { addChildValidator } = require("../../../Validator/childValidator");
 const { uploadFile } = require("../../../Middlewares/upload");
-const { authenticatedRoute, adminRoute } = require("../../../Middlewares/auth");
+const { adminRoute } = require("../../../Middlewares/auth");
 
 router.post("/addChild", adminRoute, uploadFile, addChildValidator, addChild);
-router.get("/getAllChildren", authenticatedRoute, getAllChildren);
-router.get("/getChildById/:id", authenticatedRoute, getChildById);
-router.get("/getChildrenByClassroom/:id", authenticatedRoute, getChildrenByClassroom);
+router.get("/getAllChildren", adminRoute, getAllChildren);
+router.get("/getChildById/:id", adminRoute, getChildById);
+router.get("/getChildrenByClassroom/:id", adminRoute, getChildrenByClassroom);
 router.post("/updateChild/:id", adminRoute, uploadFile, updateChild);
 router.post("/updateChild", adminRoute, uploadFile, updateChild);
 router.get("/toggleStatus/:id", adminRoute, toggleStatus);
