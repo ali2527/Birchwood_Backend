@@ -14,7 +14,6 @@ const {
 } = require("../../Helpers/notification");
 const { sendCommentNotification, sendLikeAndLoveNotification } = require("../../Helpers/sockets");
 const mongoose = require('mongoose');
-const { $elemMatch } = require("sift");
 
 exports.addPost = async (req, res) => {
   const { content, activity, children, classroom, type } = req.body;

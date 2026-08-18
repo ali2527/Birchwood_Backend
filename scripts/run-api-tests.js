@@ -1,5 +1,3 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
@@ -8,7 +6,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const Parent = require("../Models/Parent");
 const Teacher = require("../Models/Teacher");
 
-const BASE = "https://localhost:8201";
+const BASE = `http://localhost:${process.env.PORT || 3031}`;
 const stamp = Date.now();
 const PASSWORD = "ApiTest@12345A";
 const PNG = Buffer.from(
