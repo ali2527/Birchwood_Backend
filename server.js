@@ -1,9 +1,8 @@
 const express = require("express");
+const http = require("http");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const helmet = require("helmet");
-const https = require("https");
-const fs = require("fs");
 const morgan = require("morgan");
 
 require("dotenv").config();
@@ -13,6 +12,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+const PORT = process.env.PORT || 3031;
 
 require("./config/db");
 
@@ -46,14 +46,6 @@ app.use(cors(corsOptions));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "2mb" }));
 
-const credentials = {
-  key: fs.readFileSync("./certs/ssl.key"),
-  cert: fs.readFileSync("./certs/ssl.crt"),
-  ca: fs.readFileSync("./certs/ca-bundle"),
-};
-
-const httpsServer = https.createServer(credentials, app);
-
 const limiter = rateLimit({
   max: 2000,
   windowMs: 15 * 60 * 1000,
@@ -70,6 +62,6 @@ app.get("/", (req, res) => {
   res.send("Birchwood Server Running");
 });
 
-httpsServer.listen(8201, () => {
-  console.log("Listening on port 8201");
+http.createServer(app).listen(PORT, () => {
+  console.log(`Listening on port ${PORT}`);
 });
