@@ -1,6 +1,5 @@
 const { body, validationResult, check } = require('express-validator');
 const { ApiResponse } = require("../Helpers")
-const user = require("../Models/User")
 
 
 //signup Validator

@@ -1,33 +1,33 @@
-//imports
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
-const https = require("https");
-const User = require("./Models/User");
-const Coach = require("./Models/Teacher");
-const http = require("http");
-const morgan = require("morgan");
-const bodyParser = require("body-parser");
-const { Server } = require("socket.io");
-const cookieParser = require("cookie-parser");
-const fs = require("fs");
 const helmet = require("helmet");
-const { v4: uuidv4 } = require("uuid");
-const { initializeWebSocket } = require("./config/socket");
-const getRedisClient = require('./config/redisClient.js'); 
+const https = require("https");
+const fs = require("fs");
+const morgan = require("morgan");
 
-require("./config/cronjob.js");
 require("dotenv").config();
 
-// app initilize
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is required");
+}
+
 const app = express();
 
-// db initilize
 require("./config/db");
 
-//register middleware
-const coreOptions = {
-  origin: "*",
+const allowedOrigins = (process.env.CORS_ORIGIN || "*")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -36,71 +36,40 @@ const coreOptions = {
   exposedHeaders:
     "Content-Type, Authorization, X-Requested-With, Accept, VERSION",
 };
-app.use(cors(coreOptions));
-app.use(morgan("dev"));
-app.use(express.json());
-// app.use(helmet()); // Adding helmet for security headers
 
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+app.use(cors(corsOptions));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(express.json({ limit: "2mb" }));
 
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+const credentials = {
+  key: fs.readFileSync("./certs/ssl.key"),
+  cert: fs.readFileSync("./certs/ssl.crt"),
+  ca: fs.readFileSync("./certs/ca-bundle"),
+};
 
-// const local = false;
-// let credentials = {};
+const httpsServer = https.createServer(credentials, app);
 
-// if (local) {
-//   credentials = {
-//     key: fs.readFileSync("/etc/apache2/ssl/onlinetestingserver.key", "utf8"),
-//     cert: fs.readFileSync("/etc/apache2/ssl/onlinetestingserver.crt", "utf8"),
-//     ca: fs.readFileSync("/etc/apache2/ssl/onlinetestingserver.ca")
-//   };
-// } else {
-//   credentials = {
-//     key: fs.readFileSync("./certs/ssl.key"),
-//     cert: fs.readFileSync("./certs/ssl.crt"),
-//     ca: fs.readFileSync("./certs/ca-bundle")
-//   };
-// }
-
-
-credentials = {
-    key: fs.readFileSync("./certs/ssl.key"),
-    cert: fs.readFileSync("./certs/ssl.crt"),
-    ca: fs.readFileSync("./certs/ca-bundle")
-  };
-
-// var httpsServer = https.createServer(credentials, app);
-var httpsServer = http.createServer(app);
-
-initializeWebSocket(httpsServer);
-//limiting the api calls
 const limiter = rateLimit({
-  max: 1000000,
-  windowMs: 60 * 60 * 1000,
-  message: "Too many requests from this IP, please try again in an hour!",
+  max: 2000,
+  windowMs: 15 * 60 * 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many requests from this IP, please try again later",
 });
 
 app.use("/api", limiter);
-
-//static routes
 app.use("/Uploads", express.static("./Uploads"));
-
-
-// health check route
-app.get("/api/health", (_, res) => {
-  res.status(200).json({ status: "ok" });
-});
-
-
-// routes register
 app.use("/api", require("./Routes/index"));
 
-//test route
 app.get("/", (req, res) => {
   res.send("Birchwood Server Running");
 });
 
-const PORT = process.env.PORT || 3031;
-httpsServer.listen(PORT, () => {
-  console.log(`Listening on port ${PORT}`);
+httpsServer.listen(8201, () => {
+  console.log("Listening on port 8201");
 });
-

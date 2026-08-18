@@ -20,3 +20,15 @@ exports.addChildValidator = [
     next()  
   }
 ]
+
+exports.assignChildValidator = [
+  body("rollNumber").not().isEmpty().withMessage("Roll Number is Required"),
+  body("birthday").not().isEmpty().withMessage("Birthday is Required"),
+  function (req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json(ApiResponse({}, errors.array()[0].msg, false));
+    }
+    next();
+  },
+];

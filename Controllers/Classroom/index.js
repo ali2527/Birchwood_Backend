@@ -1,9 +1,7 @@
 //Models
-const User = require("../../Models/User");
 const Classroom = require("../../Models/Classroom");
 const fs = require("fs");
 const crypto = require("crypto");
-const KJUR = require("jsrsasign");
 const moment = require("moment");
 //Helpers
 const { generateToken } = require("../../Helpers/index");

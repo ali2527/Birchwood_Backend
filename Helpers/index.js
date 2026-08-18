@@ -1,9 +1,7 @@
-const { v1: uuidv1 } = require('uuid');
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv")
-dotenv.config();
+require("dotenv").config();
 
-//default api response format
 exports.ApiResponse = (data = {}, message = "", status = true) => {
   return {
     status: status,
@@ -12,39 +10,45 @@ exports.ApiResponse = (data = {}, message = "", status = true) => {
   };
 };
 
-//generate password based on caps, smalls and numbers.
+exports.pick = (obj = {}, keys = []) => {
+  const out = {};
+  keys.forEach((key) => {
+    if (obj[key] !== undefined) {
+      out[key] = obj[key];
+    }
+  });
+  return out;
+};
+
 exports.generateString = (length, onlyCaps = false, onlyNumbers = false) => {
   length = length ? length : 8;
   let charset =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let retVal = "";
   if (onlyCaps) {
     charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   }
   if (onlyNumbers) {
     charset = "1234567890";
   }
-  for (let i = 0, n = charset.length; i < length; ++i) {
-    retVal += charset.charAt(Math.floor(Math.random() * n));
+  let retVal = "";
+  for (let i = 0; i < length; ++i) {
+    retVal += charset.charAt(crypto.randomInt(0, charset.length));
   }
   return retVal;
 };
 
-
 exports.generateRandom6DigitID = (prefix) => {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomID = '';
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomID = "";
   for (let i = 0; i < 6; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    randomID += characters[randomIndex];
+    randomID += characters.charAt(crypto.randomInt(0, characters.length));
   }
-  if(prefix){
+  if (prefix) {
     return prefix + randomID;
   }
   return randomID;
-}
+};
 
-//check file extention
 exports.checkFileExtention = (file, extentions) => {
   const type = file.originalFilename.split(".").pop() || "png";
   const validTypes = extentions ? extentions : ["jpg", "jpeg", "png"];
@@ -54,21 +58,19 @@ exports.checkFileExtention = (file, extentions) => {
   return true;
 };
 
-
 exports.generateToken = (user) => {
   const token = jwt.sign(
     {
-      _id: user._id,  
+      _id: user._id,
       email: user.email,
       name: user.name,
-      isAdmin: user.isAdmin,
+      isAdmin: Boolean(user.isAdmin),
     },
     process.env.JWT_SECRET,
     { expiresIn:  "12h"}
   );
   return token;
 };
-
 
 exports.validateToken = (req, res, next) => {
   const bearerHeader = req.headers["authorization"];
@@ -78,14 +80,14 @@ exports.validateToken = (req, res, next) => {
     req.token = bearerToken;
     next();
   } else {
-    res.json(ApiResponse({}, { error: "Invalid Token" }, false));
+    res.json(exports.ApiResponse({}, { error: "Invalid Token" }, false));
   }
 };
 
 exports.verifyToken = (req, res, next) => {
   jwt.verify(req.token, process.env.JWT_SECRET, (err, authData) => {
     if (err) {
-      res.json(ApiResponse({}, { error: "Invalid Token" }, false));
+      res.json(exports.ApiResponse({}, { error: "Invalid Token" }, false));
     } else {
       req.user = authData;
       next();

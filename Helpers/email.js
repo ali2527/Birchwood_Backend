@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
-var smtpConfig = {
+
+const smtpConfig = {
   host: process.env.MAIL_HOST,
   port: process.env.MAIL_PORT,
   secure: false,
@@ -7,9 +8,10 @@ var smtpConfig = {
     user: process.env.MAIL_USERNAME,
     pass: process.env.MAIL_PASSWORD,
   },
-  tls: {rejectUnauthorized: false},
+  tls: {
+    rejectUnauthorized: process.env.MAIL_TLS_REJECT_UNAUTHORIZED !== "false",
+  },
 };
-
 
 module.exports = {
   generateEmail: async (email, subject, html) => {
@@ -21,12 +23,11 @@ module.exports = {
         text: "",
         html,
       };
-      const res = await transporter.sendMail(mailOptions);
-      // console.log(res);
+      await transporter.sendMail(mailOptions);
       return true;
     } catch (err) {
       console.log("err in generate email: ", err);
-      return true;
+      return false;
     }
   },
 };

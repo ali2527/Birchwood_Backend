@@ -1,12 +1,17 @@
-node_modules/
+node_modules
 npm-debug.log
 .DS_Store
-Uploads/*
-!Uploads/.gitkeep
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# TLS certificates and keys
 certs/
 *.pem
 *.key
-*.p12
-.idea/
-.vscode/
-*.log
+*.crt
+
+# User uploads
+Uploads/

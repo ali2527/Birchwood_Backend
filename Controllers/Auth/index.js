@@ -11,7 +11,6 @@ const {
   createResetToken,
   validateResetToken,
 } = require("../../Helpers/verification");
-const Admin = require("../../Models/Admin");
 
 //email verification code
 exports.emailVerificationCode = async (req, res) => {
@@ -20,16 +19,14 @@ exports.emailVerificationCode = async (req, res) => {
 
     let parent = await Parent.findOne({ email });
     let teacher = await Teacher.findOne({ email });
-    let admin = await Admin.findOne({ email });
 
-    if (!parent && !teacher && !admin) {
+    if (!parent && !teacher) {
       return res
         .status(400)
         .json(ApiResponse({}, "User With this email does not exist", false));
     }
 
-    let verificationCode = generateString(4, false, true);
-
+    const verificationCode = generateString(4, false, true);
     await createResetToken(email, verificationCode);
     const encoded = Buffer.from(
       JSON.stringify({ email, code: verificationCode }),
@@ -84,106 +81,33 @@ exports.verifyRecoverCode = async (req, res) => {
   }
 };
 
-//reset password Parent
-exports.resetPasswordParent = async (req, res) => {
+//reset password
+exports.resetPassword = async (req, res) => {
   try {
     const { password, confirm_password, code, email } = req.body;
 
-
-    // Validate reset token
     const reset_status = await validateResetToken(code, email);
+
     if (!reset_status) {
       return res
         .status(400)
-        .json(ApiResponse({}, "Verification Code doesn't Match Email", false));
+        .json(ApiResponse({}, "Verification Code dosent Match Email", false));
     }
+    let parent = await Parent.findOne({ email });
+    let teacher = await Teacher.findOne({ email });
 
-    // Find the user in the Parent model only
-    const parent = await Parent.findOne({ email });
-    if (!parent) {
-      return res.status(404).json(ApiResponse({}, "Parent not found", false));
+    await Reset.deleteOne({ code: code, email: email });
+
+    if (parent) {
+      parent.password = password;
+      await parent.save();
+    } else {
+      teacher.password = password;
+      await teacher.save();
     }
-
-    // Delete reset token
-    await Reset.deleteOne({ code, email });
-
-    // Update password
-    parent.password = password;
-    await parent.save();
-
-    return res
+    await res
       .status(201)
-      .json(ApiResponse({}, "Parent Password Updated Successfully", true));
-  } catch (err) {
-    res.status(500).json(ApiResponse({}, err.toString(), false));
-  }
-};
-
-
-//reset password teacher
-exports.resetPasswordTeacher = async (req, res) => {
-  try {
-    const { password, confirm_password, code, email } = req.body;
-
-    // Validate reset token
-    const reset_status = await validateResetToken(code, email);
-    if (!reset_status) {
-      return res
-        .status(400)
-        .json(ApiResponse({}, "Verification Code doesn't Match Email", false));
-    }
-
-    // Find the user in the Teacher model only
-    const teacher = await Teacher.findOne({ email });
-    if (!teacher) {
-      return res.status(404).json(ApiResponse({}, "Teacher not found", false));
-    }
-
-    // Delete reset token
-    await Reset.deleteOne({ code, email });
-
-    // Update password
-    teacher.password = password;
-    await teacher.save();
-
-    return res
-      .status(201)
-      .json(ApiResponse({}, "Teacher Password Updated Successfully", true));
-  } catch (err) {
-    res.status(500).json(ApiResponse({}, err.toString(), false));
-  }
-};
-
-
-//reset password admin
-exports.resetPasswordAdmin = async (req, res) => {
-  try {
-    const { password, confirm_password, code, email } = req.body;
-
-    // Validate reset token
-    const reset_status = await validateResetToken(code, email);
-    if (!reset_status) {
-      return res
-        .status(400)
-        .json(ApiResponse({}, "Verification Code doesn't Match Email", false));
-    }
-
-    // Find the user in the Admin model only
-    const admin = await Admin.findOne({ email });
-    if (!admin) {
-      return res.status(404).json(ApiResponse({}, "Admin not found", false));
-    }
-
-    // Delete reset token
-    await Reset.deleteOne({ code, email });
-
-    // Update password
-    admin.password = password;
-    await admin.save();
-
-    return res
-      .status(201)
-      .json(ApiResponse({}, "Admin Password Updated Successfully", true));
+      .json(ApiResponse({}, "Password Updated Successfully", true));
   } catch (err) {
     res.status(500).json(ApiResponse({}, err.toString(), false));
   }
