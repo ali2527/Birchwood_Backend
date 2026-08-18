@@ -47,6 +47,10 @@ app.use(cors(corsOptions));
 app.use(morgan(process.env.NODE_ENV === "production" || process.env.NODE_ENV === "live" ? "combined" : "dev"));
 app.use(express.json({ limit: "2mb" }));
 
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 const limiter = rateLimit({
   max: 2000,
   windowMs: 15 * 60 * 1000,
