@@ -14,6 +14,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+const PORT = Number(process.env.PORT) || 3031;
 
 require("./config/db");
 
