@@ -25,5 +25,6 @@ router.use("/homework", require("./Homework"));
 router.use("/admin/auth", require("./Admin/AdminAuth"));
 router.use("/admin/teacher", require("./Admin/AdminTeacher"));
 router.use("/admin/children", require("./Admin/AdminChildren"));
+router.use("/admin/dashboard", require("./Admin/AdminDashboard"));
 
 module.exports = router;

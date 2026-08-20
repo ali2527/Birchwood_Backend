@@ -1,4 +1,5 @@
 const fs = require("fs");
+const mongoose = require("mongoose");
 const Teacher = require("../../Models/Teacher");
 const { ApiResponse, pick } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
@@ -65,12 +66,12 @@ exports.getAllTeachers = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
-    let { keyword, from, to, status } = req.query;
+    let { keyword, from, to, status, classId, sort } = req.query;
 
     let finalAggregate = [
       {
         $sort: {
-          createdAt: 1,
+          createdAt: sort === "oldest" ? 1 : -1,
         },
       },
     ];
@@ -96,6 +97,14 @@ exports.getAllTeachers = async (req, res) => {
       });
     }
 
+    if (classId && mongoose.Types.ObjectId.isValid(classId)) {
+      finalAggregate.push({
+        $match: {
+          classroom: new mongoose.Types.ObjectId(classId),
+        },
+      });
+    }
+
     if (from) {
       finalAggregate.push({
         $match: {
@@ -116,6 +125,41 @@ exports.getAllTeachers = async (req, res) => {
       });
     }
 
+    finalAggregate.push(
+      {
+        $lookup: {
+          from: "classrooms",
+          localField: "classroom",
+          foreignField: "_id",
+          as: "classroomInfo",
+        },
+      },
+      {
+        $unwind: {
+          path: "$classroomInfo",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          classroom: {
+            $cond: [
+              { $ifNull: ["$classroomInfo._id", false] },
+              {
+                _id: "$classroomInfo._id",
+                classroomName: "$classroomInfo.classroomName",
+                classroomId: "$classroomInfo.classroomId",
+              },
+              "$classroom",
+            ],
+          },
+        },
+      },
+      {
+        $project: { classroomInfo: 0 },
+      }
+    );
+
     const myAggregate =
       finalAggregate.length > 0
         ? Teacher.aggregate(finalAggregate)
@@ -134,7 +178,7 @@ exports.getAllTeachers = async (req, res) => {
 // Get Teacher by ID
 exports.getTeacherById = async (req, res) => {
   try {
-    const teacher = await Teacher.findById(req.params.id);
+    const teacher = await Teacher.findById(req.params.id).populate("classroom");
 
     if (!teacher) {
       return res.json(ApiResponse({}, "Teacher not found", true));

@@ -102,5 +102,5 @@ http.createServer(app).listen(PORT, () => {
   const env = process.env.NODE_ENV || "development";
   const version = process.env.VERSION || "1.0.0";
   const baseUrl = `http://localhost:${PORT}`;
-  console.log(`Server is running on ${baseUrl} (${env}, v${version})`);
+  console.log(`Birchwood Server is running`);
 });
