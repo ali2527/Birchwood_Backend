@@ -51,29 +51,23 @@ exports.addTimetable = async (req, res) => {
     const { classroom } = req.params; // Assuming the classroom is in the URL parameters
     const { day } = req.query; // Assuming day filter is in the query parameters
 
-    try {
-      // Fetch all timetables for the given classroom
-      let timetables = await Timetable.find({ classroom });
-  
-      // If a specific day is provided in the query, filter the timetables by that day
-      if (day) {
-        timetables = timetables.filter(timetable => timetable.day === day);
+  try {
+    const slots = await Timetable.find({ classroom }).sort({ startTime: 1 }).lean();
+    const filtered = day ? slots.filter((item) => item.day === day) : slots;
+
+    const byDay = filtered.reduce((groupedTimetables, timetable) => {
+      const key = timetable.day;
+      if (!groupedTimetables[key]) {
+        groupedTimetables[key] = [];
       }
-  
-      // Group the timetables by day
-      const timetablesByDay = timetables.reduce((groupedTimetables, timetable) => {
-        const { day } = timetable;
-        if (!groupedTimetables[day]) {
-          groupedTimetables[day] = [];
-        }
-        groupedTimetables[day].push(timetable);
-        return groupedTimetables;
-      }, {});
-  
-      return res.json(ApiResponse({...timetablesByDay }, "", true));
-    } catch (error) {
-      return res.json(ApiResponse({}, error.message, false));
-    }
+      groupedTimetables[key].push(timetable);
+      return groupedTimetables;
+    }, {});
+
+    return res.json(ApiResponse({ slots: filtered, byDay }, "", true));
+  } catch (error) {
+    return res.json(ApiResponse({}, error.message, false));
+  }
   };
 
 

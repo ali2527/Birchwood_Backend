@@ -1,12 +1,8 @@
 //Models
-const User = require("../../Models/User");
 const Children = require("../../Models/Children");
-const Classroom = require("../../Models/Classroom");
 const Parent = require("../../Models/Parent");
 
 const fs = require("fs");
-const crypto = require("crypto");
-const KJUR = require("jsrsasign");
 const moment = require("moment");
 //Helpers
 const { ApiResponse } = require("../../Helpers/index");
@@ -78,75 +74,112 @@ exports.addParent = async (req, res) => {
 exports.searchStudents = async (req, res) => {
   try {
     const { keyword } = req.query;
-
-    //if not keyword return 10 students
-    if (!keyword) {
-      const students = await Children.find({status:"ACTIVE"}).limit(10);
-      return res.json(ApiResponse({ students }, "", true));
-    }
-
-    const students = await Children.find({
-      $or: [
+    const filter = { status: "ACTIVE" };
+    if (keyword) {
+      filter.$or = [
         { firstName: { $regex: keyword, $options: "i" } },
         { lastName: { $regex: keyword, $options: "i" } },
-        { email: { $regex: keyword, $options: "i" } },
-      ],
-    },{status:"ACTIVE"});
-
+        { rollNumber: { $regex: keyword, $options: "i" } },
+      ];
+    }
+    const students = await Children.find(filter)
+      .select("_id firstName lastName rollNumber parent status")
+      .limit(50)
+      .sort({ firstName: 1 });
     return res.json(ApiResponse({ students }, "", true));
   } catch (error) {
     return res.json(ApiResponse({}, errorHandler(error) ? errorHandler(error) : error.message, false));
   }
 };
-// Get all parents
+
 exports.getAllParent = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
+    const { keyword, status, studentId, sort } = req.query;
 
-    let finalAggregate = [{
-      $lookup:{
-        from: "childrens",
-        localField: "_id",
-        foreignField: "parent",
-        as: "childrens",}
-    }];
+    let finalAggregate = [
+      {
+        $sort: {
+          createdAt: sort === "oldest" ? 1 : -1,
+        },
+      },
+      {
+        $lookup: {
+          from: "childrens",
+          let: { parentId: "$_id", childIds: { $ifNull: ["$childrens", []] } },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$parent", "$$parentId"] },
+                    { $in: ["$_id", "$$childIds"] },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                firstName: 1,
+                lastName: 1,
+                rollNumber: 1,
+                status: 1,
+              },
+            },
+          ],
+          as: "childrens",
+        },
+      },
+    ];
 
-    if (req.query.keyword) {
+    if (keyword) {
+      const regex = new RegExp(keyword, "i");
       finalAggregate.push({
         $match: {
           $or: [
-            { firstName: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
-            { lastName: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
-            { email: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
-            {parentId: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
+            { fatherFirstName: { $regex: regex } },
+            { fatherLastName: { $regex: regex } },
+            { motherFirstName: { $regex: regex } },
+            { motherLastName: { $regex: regex } },
+            { email: { $regex: regex } },
+            { parentId: { $regex: regex } },
+            { city: { $regex: regex } },
+            { "childrens.firstName": { $regex: regex } },
+            { "childrens.lastName": { $regex: regex } },
           ],
         },
       });
     }
 
-    if(req.query.status){
+    if (status) {
       finalAggregate.push({
-        $match: {
-          status: req.query.status
-        }
+        $match: { status },
       });
     }
 
-    if(req.query.studentId){
+    if (studentId && mongoose.Types.ObjectId.isValid(studentId)) {
       finalAggregate.push({
         $match: {
-          "childrens._id": new mongoose.Types.ObjectId(req.query.studentId)
-        }
+          "childrens._id": new mongoose.Types.ObjectId(studentId),
+        },
       });
     }
 
-
-    const myAggregate = finalAggregate.length > 0 ? Parent.aggregate(finalAggregate) : Parent.aggregate([]);
-
-    Parent.aggregatePaginate(myAggregate, { page, limit }).then((parents) => {
-      res.json(ApiResponse(parents));
+    finalAggregate.push({
+      $project: {
+        hashed_password: 0,
+        salt: 0,
+      },
     });
+
+    Parent.aggregatePaginate(Parent.aggregate(finalAggregate), { page, limit })
+      .then((parents) => {
+        res.json(ApiResponse(parents));
+      })
+      .catch((error) => {
+        res.json(ApiResponse({}, error.message, false));
+      });
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
@@ -233,23 +266,42 @@ parent.password =  req.body.password;
 };
 
 
+function assignedChildFilter(parent) {
+  const ids = (parent.childrens || []).filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const filters = [{ parent: parent._id }];
+  if (ids.length) {
+    filters.push({ _id: { $in: ids } });
+  }
+  return { $or: filters };
+}
+
 // Delete a parent
 exports.deleteParent = async (req, res) => {
   try {
-    const parent = await Parent.findByIdAndRemove(req.params.id);
+    const parent = await Parent.findById(req.params.id);
 
     if (!parent) {
-      return res.json(ApiResponse({}, "Parent Profile not found", false));
+      return res.status(404).json(ApiResponse({}, "Parent Profile not found", false));
     }
+
+    const linkedChildren = await Children.countDocuments(assignedChildFilter(parent));
+
+    if (linkedChildren > 0) {
+      return res.status(400).json(
+        ApiResponse(
+          {},
+          "Cannot delete this parent while children are assigned. Reassign or remove the children first.",
+          false
+        )
+      );
+    }
+
+    await Parent.findByIdAndDelete(parent._id);
 
     if (parent.image) {
       const filePath = `./Uploads/${parent.image}`;
-
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
-        console.log(`File '${filePath}' deleted.`);
-      } else {
-        console.log(`File '${filePath}' does not exist.`);
       }
     }
 

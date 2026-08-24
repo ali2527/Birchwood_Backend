@@ -1,6 +1,7 @@
 //Models
 const Children = require("../../Models/Children");
 const Classroom = require("../../Models/Classroom");
+const Parent = require("../../Models/Parent");
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -75,6 +76,29 @@ exports.addChild = async (req, res) => {
         false
       )
     );
+  }
+};
+
+exports.searchParents = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    const filter = {};
+    if (keyword) {
+      filter.$or = [
+        { fatherFirstName: { $regex: keyword, $options: "i" } },
+        { fatherLastName: { $regex: keyword, $options: "i" } },
+        { motherFirstName: { $regex: keyword, $options: "i" } },
+        { motherLastName: { $regex: keyword, $options: "i" } },
+        { email: { $regex: keyword, $options: "i" } },
+      ];
+    }
+    const parents = await Parent.find(filter)
+      .select("_id fatherFirstName fatherLastName motherFirstName motherLastName email phone status")
+      .limit(keyword ? 50 : 10)
+      .sort({ createdAt: -1 });
+    return res.json(ApiResponse({ parents }, "", true));
+  } catch (error) {
+    return res.json(ApiResponse({}, error.message, false));
   }
 };
 

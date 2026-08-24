@@ -7,6 +7,7 @@ const {
   updateChild,
   toggleStatus,
   deleteChild,
+  searchParents,
 } = require("../../../Controllers/Admin/adminChildrenController");
 const router = express.Router();
 const { addChildValidator } = require("../../../Validator/childValidator");
@@ -15,6 +16,7 @@ const { adminRoute } = require("../../../Middlewares/auth");
 
 router.post("/addChild", adminRoute, uploadFile, addChildValidator, addChild);
 router.get("/getAllChildren", adminRoute, getAllChildren);
+router.get("/searchParents", adminRoute, searchParents);
 router.get("/getChildById/:id", adminRoute, getChildById);
 router.get("/getChildrenByClassroom/:id", adminRoute, getChildrenByClassroom);
 router.post("/updateChild/:id", adminRoute, uploadFile, updateChild);

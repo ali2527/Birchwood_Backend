@@ -8,6 +8,11 @@
     "dev": "nodemon server.js",
     "seed:admin": "node scripts/seed-admin.js",
     "seed:teachers": "node scripts/seed-teachers.js",
+    "seed:parents": "node scripts/seed-parents.js",
+    "seed:attendance": "node scripts/seed-teacher-attendance.js",
+    "seed:timetable": "node scripts/seed-timetable.js",
+    "test:teacher-portal": "node scripts/test-teacher-portal.js",
+    "test:admin-portal": "node scripts/test-admin-portal.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

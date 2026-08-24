@@ -103,6 +103,14 @@ const teacherSchema = new Schema(
     image: {
       type: String,
     },
+    dateOfBirth: {
+      type: Date,
+      required: false,
+    },
+    placeOfBirth: {
+      type: String,
+      required: false,
+    },
 
     hashed_password: {
       type: String,

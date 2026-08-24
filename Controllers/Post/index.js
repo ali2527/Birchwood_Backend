@@ -17,7 +17,7 @@ const mongoose = require('mongoose');
 
 exports.addPost = async (req, res) => {
   const { content, activity, children, classroom, type } = req.body;
-  const { image, video } = req.files;
+  const { image, video } = req.files || {};
 
   let imagesArr = image ? image.map((item) => item?.filename) : [];
   let videosArr = video ? video.map((item) => item?.filename) : [];
@@ -27,7 +27,11 @@ exports.addPost = async (req, res) => {
     let newPost = new Post({
       content,
       activity,
-      children: children ? JSON.parse(children) : [],
+      children: children
+        ? typeof children === "string"
+          ? JSON.parse(children)
+          : children
+        : [],
       classroom: classroom ? classroom : null,
       type,
       author: req.user._id,
@@ -133,7 +137,10 @@ exports.getAllPosts = async (req, res) => {
           as: "activity",
         },
       }, {
-      $unwind: "$activity",
+      $unwind: {
+        path: "$activity",
+        preserveNullAndEmptyArrays: true,
+      },
     }, {
       $sort: {
         createdAt: -1
