@@ -188,6 +188,7 @@ exports.getAllTeachers = async (req, res) => {
                 _id: "$classroomInfo._id",
                 classroomName: "$classroomInfo.classroomName",
                 classroomId: "$classroomInfo.classroomId",
+                color: "$classroomInfo.color",
               },
               "$classroom",
             ],
@@ -399,5 +400,29 @@ exports.deleteAttendance = async (req, res) => {
     return res.json(ApiResponse({}, "Attendance deleted successfully", true));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
+  }
+};
+
+exports.resetTeacherPassword = async (req, res) => {
+  try {
+    const teacher = await Teacher.findById(req.params.id);
+    if (!teacher) {
+      return res.status(404).json(ApiResponse({}, "Teacher not found", false));
+    }
+
+    const generated = req.body.password ? null : makeTeacherPassword();
+    const password = req.body.password || generated;
+    teacher.password = password;
+    await teacher.save();
+
+    return res.status(201).json(
+      ApiResponse(
+        { password: generated || undefined },
+        "Teacher password updated successfully",
+        true
+      )
+    );
+  } catch (err) {
+    return res.status(500).json(ApiResponse({}, err.toString(), false));
   }
 };

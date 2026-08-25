@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate");
 const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
-const {generateRandom6DigitID} = require("../Helpers")
+const { generateRandom6DigitID } = require("../Helpers");
+const { CLASSROOM_COLORS, DEFAULT_CLASSROOM_COLOR } = require("../constants/classroomColors");
 const Schema = mongoose.Schema;
 
 const classroomSchema = new Schema(
@@ -25,6 +26,11 @@ const classroomSchema = new Schema(
     description: {
       type: String,
       required: false,
+    },
+    color: {
+      type: String,
+      enum: CLASSROOM_COLORS,
+      default: DEFAULT_CLASSROOM_COLOR,
     },
     teacher: {
       type: mongoose.Schema.Types.ObjectId,

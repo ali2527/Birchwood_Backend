@@ -24,7 +24,10 @@ exports.addTeacherValidator = [
 
 
 exports.resetPasswordValidator = [
-  body('password').not().isEmpty().withMessage("Password is Required").isStrongPassword().withMessage("Password is too Weak"),
+  body("password")
+    .optional({ checkFalsy: true })
+    .isStrongPassword()
+    .withMessage("Password is too weak"),
   function (req, res, next) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

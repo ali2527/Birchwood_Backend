@@ -5,6 +5,8 @@ const {
   getInventoryById,
   getInventoryByCategory,
   updateInventory,
+  issueStock,
+  removeIssuance,
   toggleStatus,
   deleteInventory,
 } = require("../../Controllers/Inventory");
@@ -18,6 +20,8 @@ router.get("/getAllInventorys", authenticatedRoute, getAllInventorys);
 router.get("/getInventoryById/:id", authenticatedRoute, getInventoryById);
 router.get("/getInventoryByCategory/:id", authenticatedRoute, getInventoryByCategory);
 router.post("/updateInventory/:id", adminRoute, uploadProduct, updateInventory);
+router.post("/issueStock/:id", adminRoute, issueStock);
+router.post("/removeIssuance/:id/:issuanceId", adminRoute, removeIssuance);
 router.get("/toggleStatus/:id", adminRoute, toggleStatus);
 router.get("/deleteInventory/:id", adminRoute, deleteInventory);
 

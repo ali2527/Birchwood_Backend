@@ -3,13 +3,13 @@ const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
 const Parent = require("../Models/Parent");
+const { seedEntityId } = require("../Helpers/seedIds");
 
 const DEFAULT_PASSWORD = process.env.PARENT_SEED_PASSWORD || "Parent@12345";
 const UPLOAD_DIR = path.join(__dirname, "..", "Uploads");
 
 const PARENTS = [
   {
-    parentId: "P100001",
     fatherFirstName: "James",
     fatherLastName: "William",
     motherFirstName: "Helen",
@@ -24,7 +24,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/36.jpg",
   },
   {
-    parentId: "P100002",
     fatherFirstName: "Andre",
     fatherLastName: "Santoso",
     motherFirstName: "Dewi",
@@ -39,7 +38,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/41.jpg",
   },
   {
-    parentId: "P100003",
     fatherFirstName: "Michael",
     fatherLastName: "Tan",
     motherFirstName: "Grace",
@@ -54,7 +52,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/52.jpg",
   },
   {
-    parentId: "P100004",
     fatherFirstName: "Rizky",
     fatherLastName: "Pratama",
     motherFirstName: "Sinta",
@@ -69,7 +66,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/64.jpg",
   },
   {
-    parentId: "P100005",
     fatherFirstName: "David",
     fatherLastName: "Kurniawan",
     motherFirstName: "Anita",
@@ -84,7 +80,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/18.jpg",
   },
   {
-    parentId: "P100006",
     fatherFirstName: "Fajar",
     fatherLastName: "Hidayat",
     motherFirstName: "Lestari",
@@ -99,7 +94,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/28.jpg",
   },
   {
-    parentId: "P100007",
     fatherFirstName: "Jonathan",
     fatherLastName: "Lee",
     motherFirstName: "Michelle",
@@ -114,7 +108,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/45.jpg",
   },
   {
-    parentId: "P100008",
     fatherFirstName: "Budi",
     fatherLastName: "Wijaya",
     motherFirstName: "Ratna",
@@ -129,7 +122,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/57.jpg",
   },
   {
-    parentId: "P100009",
     fatherFirstName: "Arjun",
     fatherLastName: "Mehta",
     motherFirstName: "Priya",
@@ -144,7 +136,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/12.jpg",
   },
   {
-    parentId: "P100010",
     fatherFirstName: "Hendra",
     fatherLastName: "Gunawan",
     motherFirstName: "Maya",
@@ -159,7 +150,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/71.jpg",
   },
   {
-    parentId: "P100011",
     fatherFirstName: "Kevin",
     fatherLastName: "Hartono",
     motherFirstName: "Jessica",
@@ -174,7 +164,6 @@ const PARENTS = [
     photo: "https://randomuser.me/api/portraits/men/77.jpg",
   },
   {
-    parentId: "P100012",
     fatherFirstName: "Salman",
     fatherLastName: "Farizi",
     motherFirstName: "Amina",
@@ -209,7 +198,9 @@ async function seedParents() {
 
   await mongoose.connect(process.env.DB);
 
-  for (const item of PARENTS) {
+  for (let index = 0; index < PARENTS.length; index += 1) {
+    const item = PARENTS[index];
+    const parentId = seedEntityId("P", index + 1);
     const imageName = `seed-parent-${item.fatherFirstName.toLowerCase()}-${item.fatherLastName.toLowerCase()}.jpg`;
     try {
       await downloadPortrait(item.photo, imageName);
@@ -219,7 +210,7 @@ async function seedParents() {
     }
 
     const payload = {
-      parentId: item.parentId,
+      parentId,
       fatherFirstName: item.fatherFirstName,
       fatherLastName: item.fatherLastName,
       motherFirstName: item.motherFirstName,
@@ -234,9 +225,7 @@ async function seedParents() {
       createdAt: new Date(item.createdAt),
     };
 
-    let parent = await Parent.findOne({
-      $or: [{ email: payload.email }, { parentId: item.parentId }],
-    });
+    let parent = await Parent.findOne({ email: payload.email });
 
     if (parent) {
       parent.set(payload);

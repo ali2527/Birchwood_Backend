@@ -6,6 +6,14 @@ const Timetable = require("../Models/TimeTable");
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
 const CLASS_SUBJECTS = {
+  "NUR-A": "Play & Circle",
+  "KG-A": "Letters & Numbers",
+  "I-A": "Literacy",
+  "II-A": "Literacy",
+  "III-A": "Inquiry",
+  "IV-A": "Core Studies",
+  "V-A": "Core Studies",
+  "VI-A": "Core Studies",
   "VII-A": "History",
   "VII-B": "Mathematics",
   "VII-C": "Science",

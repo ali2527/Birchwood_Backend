@@ -1,25 +1,69 @@
-const { body, validationResult, check } = require('express-validator');
-const { ApiResponse } = require("../Helpers")
+const { body, validationResult } = require("express-validator");
+const { ApiResponse } = require("../Helpers");
+const Classroom = require("../Models/Classroom");
+const Parent = require("../Models/Parent");
+const mongoose = require("mongoose");
 
+async function assertObjectId(value, label) {
+  if (!value) return true;
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    throw new Error(`Invalid ${label}`);
+  }
+  return true;
+}
 
-//add Query Validator
+const childFieldsValidator = [
+  body("rollNumber").not().isEmpty().withMessage("Roll number is required"),
+  body("firstName").not().isEmpty().withMessage("First name is required"),
+  body("lastName").optional({ checkFalsy: true }),
+  body("term").not().isEmpty().withMessage("Term is required"),
+  body("birthday").not().isEmpty().withMessage("Birthday is required"),
+  body("age").not().isEmpty().withMessage("Age is required"),
+  body("allergies").optional({ checkFalsy: true }),
+  body("fears").optional({ checkFalsy: true }),
+  body("conditions").optional({ checkFalsy: true }),
+  body("summary").optional({ checkFalsy: true }),
+  body("status").optional().isIn(["ACTIVE", "INACTIVE"]).withMessage("Invalid status"),
+  body("classroom")
+    .optional({ checkFalsy: true })
+    .custom(async (value) => {
+      await assertObjectId(value, "classroom");
+      const classroom = await Classroom.findById(value).select("_id");
+      if (!classroom) throw new Error("Selected class was not found");
+      return true;
+    }),
+  body("parent")
+    .optional({ checkFalsy: true })
+    .custom(async (value) => {
+      await assertObjectId(value, "parent");
+      const parent = await Parent.findById(value).select("_id");
+      if (!parent) throw new Error("Selected parent was not found");
+      return true;
+    }),
+];
+
 exports.addChildValidator = [
-  body('rollNumber').not().isEmpty().withMessage("Roll Number is Required"),
-  body('firstName').not().isEmpty().withMessage("First name is Required"),
-  body('lastName').not().isEmpty().withMessage("Last name is Required"),
-  body('term').not().isEmpty().withMessage("Term is Required"),
-  body('birthday').not().isEmpty().withMessage("Birthday is Required"),
-  body('age').not().isEmpty().withMessage("Age is Required"),
-  body('classroom').not().isEmpty().withMessage("Class is Required"),
-
+  ...childFieldsValidator,
+  body("image").not().isEmpty().withMessage("Student photo is required"),
   function (req, res, next) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json(ApiResponse({}, errors.array()[0].msg, false));
     }
-    next()  
-  }
-]
+    next();
+  },
+];
+
+exports.updateChildValidator = [
+  ...childFieldsValidator,
+  function (req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json(ApiResponse({}, errors.array()[0].msg, false));
+    }
+    next();
+  },
+];
 
 exports.assignChildValidator = [
   body("rollNumber").not().isEmpty().withMessage("Roll Number is Required"),

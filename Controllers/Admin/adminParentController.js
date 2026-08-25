@@ -35,7 +35,8 @@ exports.addParent = async (req, res) => {
     city,
     state,
     image,
-    zip
+    zip,
+    status,
   } = req.body;
 
   try {
@@ -58,7 +59,8 @@ exports.addParent = async (req, res) => {
       city,
       state,
       image,
-      zip
+      zip,
+      status: status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     });
 
     await parent.save();
@@ -125,6 +127,7 @@ exports.getAllParent = async (req, res) => {
                 lastName: 1,
                 rollNumber: 1,
                 status: 1,
+                image: 1,
               },
             },
           ],
@@ -186,19 +189,41 @@ exports.getAllParent = async (req, res) => {
 };
 
 // Get parent by ID
+function assignedChildFilter(parent) {
+  const ids = (parent.childrens || []).filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const filters = [{ parent: parent._id }];
+  if (ids.length) {
+    filters.push({ _id: { $in: ids } });
+  }
+  return { $or: filters };
+}
+
 exports.getParentById = async (req, res) => {
   try {
-    const parent = await Parent.findById(req.params.id);
+    const parent = await Parent.findById(req.params.id)
+      .select("-hashed_password -salt")
+      .lean();
 
     if (!parent) {
       return res.json(ApiResponse({}, "Parent not found", true));
     }
 
-    return res.json(ApiResponse({ parent }, "", true));
+    const childrens = await Children.find(assignedChildFilter(parent))
+      .select("firstName lastName rollNumber image status classroom birthday age")
+      .populate("classroom", "classroomName classroomId")
+      .sort({ firstName: 1 })
+      .lean();
+
+    return res.json(ApiResponse({ parent: { ...parent, childrens } }, "", true));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
+
+function makeParentPassword() {
+  const n = String(Math.floor(10000 + Math.random() * 90000));
+  return `Parent@${n}aA`;
+}
 
 // Update parent
 exports.updateParent = async (req, res) => {
@@ -220,7 +245,8 @@ exports.updateParent = async (req, res) => {
     }
 
 
-    let parent = await Parent.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { password, ...updates } = req.body;
+    let parent = await Parent.findByIdAndUpdate(req.params.id, updates, { new: true });
 
     if (!parent) {
       return res.json(ApiResponse({}, "No parent found", false));
@@ -247,33 +273,30 @@ exports.toggleStatus = async (req, res) => {
 };
 
 
-//reset Teacher password
+//reset parent password
 exports.resetParentPassword = async (req, res) => {
   try {
-    // Find the user in the Teacher model
     const parent = await Parent.findById(req.params.id);
     if (!parent) {
       return res.status(404).json(ApiResponse({}, "Parent not found", false));
     }
 
-parent.password =  req.body.password;
+    const generated = req.body.password ? null : makeParentPassword();
+    const password = req.body.password || generated;
+    parent.password = password;
     await parent.save();
 
-    return res.status(201).json(ApiResponse({}, "Parent Password Updated Successfully", true));
+    return res.status(201).json(
+      ApiResponse(
+        { password: generated || undefined },
+        "Parent password updated successfully",
+        true
+      )
+    );
   } catch (err) {
     res.status(500).json(ApiResponse({}, err.toString(), false));
   }
 };
-
-
-function assignedChildFilter(parent) {
-  const ids = (parent.childrens || []).filter((id) => mongoose.Types.ObjectId.isValid(id));
-  const filters = [{ parent: parent._id }];
-  if (ids.length) {
-    filters.push({ _id: { $in: ids } });
-  }
-  return { $or: filters };
-}
 
 // Delete a parent
 exports.deleteParent = async (req, res) => {
