@@ -1,59 +1,44 @@
-//Models
 const Homework = require("../../Models/Homework");
 const moment = require("moment");
-
-//Helpers
-const { generateToken } = require("../../Helpers/index");
+const mongoose = require("mongoose");
+const Children = require("../../Models/Children");
 const { ApiResponse } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
 const { sendNotificationToAdmin } = require("../../Helpers/notification");
-const {generateRandom6DigitID} = require("../../Helpers");
-const { isAfter } = require("validator");
-const { default: mongoose } = require("mongoose");
-const Children = require("../../Models/Children");
-
+const {
+  normalizeHomeworkPayload,
+  validateHomeworkAssignment,
+  notifyHomeworkAssigned,
+  homeworkLookupStages,
+} = require("../../Helpers/homeworkAssignment");
 
 exports.addHomework = async (req, res) => {
-  const {
-    title,
-    description,
-    children,
-    classroom,
-    teacher,
-    dueDate,
-    assignDate,
-    assignee,
-    type } = req.body;
   try {
-  
-    const homework = new Homework({
-      title,
-    description,
-    children,
-    classroom,
-    teacher,
-    dueDate,
-    assignDate:new Date(),  
-    assignee,
-    type,
-    });
+    const payload = await normalizeHomeworkPayload(req.body, req);
+    const validationError = await validateHomeworkAssignment(payload, req);
 
-    await homework.save();
+    if (validationError) {
+      return res.status(400).json(ApiResponse({}, validationError, false));
+    }
 
-    const title2 = "New Homework Created";
-    const content2 = `A new homework has been created`;
-    sendNotificationToAdmin(title2, content2);
+    const homework = await Homework.create(payload);
+
+    await notifyHomeworkAssigned(homework);
+
+    if (req.isAdmin) {
+      sendNotificationToAdmin(
+        "New homework created",
+        `${homework.title} was assigned (${homework.assignee === "CLASS" ? "class" : "student"})`,
+        "NOTIFICATION"
+      );
+    }
 
     return res
-      .status(200)
-      .json(ApiResponse({ homework }, "Homework Created Successfully", true));
+      .status(201)
+      .json(ApiResponse({ homework }, "Homework created successfully", true));
   } catch (error) {
     return res.json(
-      ApiResponse(
-        {},
-        errorHandler(error) ? errorHandler(error) : error.message,
-        false
-      )
+      ApiResponse({}, errorHandler(error) ? errorHandler(error) : error.message, false)
     );
   }
 };
@@ -62,78 +47,67 @@ exports.getAllHomework = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
-    let { keyword,children,type,assignee, from, to, status } = req.query;
+    const { keyword, children, type, assignee, from, to, status } = req.query;
 
-    let finalAggregate = [
-      {
-        $sort: {
-          assignDate: 1,
-        },
-      },
-    ];
+    const finalAggregate = [];
 
-    if (keyword) {
-      const regex = new RegExp(keyword.toLowerCase(), "i");
+    if (req.userRole === "teacher" && req.user?._id) {
       finalAggregate.push({
         $match: {
-          $or: [
-            { title: { $regex: regex } },
-            { description: { $regex: regex } },
-          ],
+          teacher: new mongoose.Types.ObjectId(req.user._id),
         },
       });
     }
 
-    if(children){
+    finalAggregate.push({ $sort: { assignDate: -1 } });
+
+    if (keyword) {
+      const regex = new RegExp(String(keyword).trim(), "i");
       finalAggregate.push({
-        $match:{
-          children:new mongoose.Types.ObjectId(children)
-        }
-      })
+        $match: {
+          $or: [{ title: { $regex: regex } }, { description: { $regex: regex } }],
+        },
+      });
     }
 
-    if(type){
+    if (children) {
       finalAggregate.push({
-        $match:{type}
-      })
+        $match: { children: new mongoose.Types.ObjectId(children) },
+      });
     }
 
-    if(assignee){
-      finalAggregate.push({
-        $match:{assignee}
-      })
+    if (type) {
+      finalAggregate.push({ $match: { type } });
+    }
+
+    if (assignee) {
+      finalAggregate.push({ $match: { assignee } });
     }
 
     if (from) {
       finalAggregate.push({
-        $match: {
-          dueDate: {
-            $gte: moment(from).startOf("day").toDate(),
-          },
-        },
+        $match: { dueDate: { $gte: moment(from).startOf("day").toDate() } },
       });
     }
 
     if (to) {
       finalAggregate.push({
-        $match: {
-          dueDate: {
-            $lte: moment(to).endOf("day").toDate(),
-          },
-        },
+        $match: { dueDate: { $lte: moment(to).endOf("day").toDate() } },
       });
     }
 
-    const myAggregate =
-      finalAggregate.length > 0
-        ? Homework.aggregate(finalAggregate)
-        : Homework.aggregate([]);
+    if (status) {
+      finalAggregate.push({ $match: { status } });
+    }
 
-    Homework.aggregatePaginate(myAggregate, { page, limit }).then(
-      (homeworks) => {
-        res.json(ApiResponse(homeworks));
-      }
-    );
+    finalAggregate.push(...homeworkLookupStages());
+
+    const homeworks = await Homework.aggregatePaginate(Homework.aggregate(finalAggregate), {
+      page,
+      limit,
+    });
+
+    return res.json(ApiResponse(homeworks));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
@@ -143,69 +117,69 @@ exports.getAllChildHomework = async (req, res) => {
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
-    let { keyword, from, to, status } = req.query;
+    const { from, to } = req.query;
 
-    let children = await Children.findById(req.params.id);
+    const child = await Children.findById(req.params.id);
+    if (!child) {
+      return res.status(404).json(ApiResponse({}, "Child not found", false));
+    }
 
-    let finalAggregate = [{
-      $match:{
-        $or: [
-          { children }, 
-          { classroom:new mongoose.Types.ObjectId(children.classroom) },
-        ],
-        
-      }
-    },
-      {
-        $sort: {
-          assignDate: 1,
-        },
-      },
+    const matchConditions = [
+      { assignee: "CHILD", children: child._id },
     ];
 
+    if (child.classroom) {
+      matchConditions.push({
+        assignee: "CLASS",
+        classroom: child.classroom,
+      });
+    }
+
+    const finalAggregate = [
+      {
+        $match: {
+          status: "ACTIVE",
+          $or: matchConditions,
+        },
+      },
+      { $sort: { assignDate: -1 } },
+    ];
 
     if (from) {
       finalAggregate.push({
-        $match: {
-          dueDate: {
-            $gte: moment(from).startOf("day").toDate(),
-          },
-        },
+        $match: { dueDate: { $gte: moment(from).startOf("day").toDate() } },
       });
     }
 
     if (to) {
       finalAggregate.push({
-        $match: {
-          dueDate: {
-            $lte: moment(to).endOf("day").toDate(),
-          },
-        },
+        $match: { dueDate: { $lte: moment(to).endOf("day").toDate() } },
       });
     }
 
-    const myAggregate =
-      finalAggregate.length > 0
-        ? Homework.aggregate(finalAggregate)
-        : Homework.aggregate([]);
+    finalAggregate.push(...homeworkLookupStages());
 
-    Homework.aggregatePaginate(myAggregate, { page, limit }).then(
-      (homeworks) => {
-        res.json(ApiResponse(homeworks));
-      }
-    );
+    const homeworks = await Homework.aggregatePaginate(Homework.aggregate(finalAggregate), {
+      page,
+      limit,
+    });
+
+    return res.json(ApiResponse(homeworks));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
 
-// Get homework by ID
 exports.getHomeworkById = async (req, res) => {
   try {
-    const homework = await Homework.findById(req.params.id)
+    const result = await Homework.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
+      ...homeworkLookupStages(),
+    ]);
 
+    const homework = result[0];
     if (!homework) {
-      return res.json(ApiResponse({}, "Homework not found", true));
+      return res.status(404).json(ApiResponse({}, "Homework not found", false));
     }
 
     return res.json(ApiResponse({ homework }, "", true));
@@ -214,41 +188,43 @@ exports.getHomeworkById = async (req, res) => {
   }
 };
 
-// Get homework by ID
 exports.updateHomework = async (req, res) => {
   try {
-    let homework = await Homework.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-
-    if (!homework) {
-      return res.json(ApiResponse({}, "No Homework found", false));
+    const existing = await Homework.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json(ApiResponse({}, "Homework not found", false));
     }
 
-    return res.json(ApiResponse(homework, "Homework updated successfully"));
+    const payload = await normalizeHomeworkPayload(
+      { ...existing.toObject(), ...req.body },
+      req
+    );
+    const validationError = await validateHomeworkAssignment(payload, req);
+
+    if (validationError) {
+      return res.status(400).json(ApiResponse({}, validationError, false));
+    }
+
+    const homework = await Homework.findByIdAndUpdate(req.params.id, payload, { new: true });
+
+    return res.json(ApiResponse({ homework }, "Homework updated successfully", true));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
 
-
-// Delete a homework
 exports.deleteHomework = async (req, res) => {
   try {
     const homework = await Homework.findByIdAndRemove(req.params.id);
 
     if (!homework) {
-      return res.json(ApiResponse({}, "Homework not found", false));
+      return res.status(404).json(ApiResponse({}, "Homework not found", false));
     }
 
-    return res.json(ApiResponse({}, "Homework Deleted Successfully", true));
+    return res.json(ApiResponse({}, "Homework deleted successfully", true));
   } catch (error) {
     return res.json(
-      ApiResponse(
-        {},
-        errorHandler(error) ? errorHandler(error) : error.message,
-        false
-      )
+      ApiResponse({}, errorHandler(error) ? errorHandler(error) : error.message, false)
     );
   }
 };

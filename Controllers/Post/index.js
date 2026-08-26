@@ -16,6 +16,10 @@ const { sendCommentNotification, sendLikeAndLoveNotification } = require("../../
 const mongoose = require('mongoose');
 
 exports.addPost = async (req, res) => {
+  if (req.isAdmin) {
+    return res.status(403).json(ApiResponse({}, "Admins cannot create posts", false));
+  }
+
   const { content, activity, children, classroom, type } = req.body;
   const { image, video } = req.files || {};
 
@@ -24,6 +28,7 @@ exports.addPost = async (req, res) => {
 
   console.log(req.files);
   try {
+    const authorId = req.isAdmin && req.body.author ? req.body.author : req.user._id;
     let newPost = new Post({
       content,
       activity,
@@ -34,7 +39,7 @@ exports.addPost = async (req, res) => {
         : [],
       classroom: classroom ? classroom : null,
       type,
-      author: req.user._id,
+      author: authorId,
       images: imagesArr,
       videos: videosArr,
     });
@@ -66,8 +71,23 @@ exports.getAllPosts = async (req, res) => {
 
     let finalAggregate = []
 
+    if (req.query.type && ["CLASS", "CHILD"].includes(String(req.query.type).toUpperCase())) {
+      finalAggregate.push({ $match: { type: String(req.query.type).toUpperCase() } });
+    }
+
+    if (req.query.keyword) {
+      const keyword = String(req.query.keyword).trim();
+      if (keyword) {
+        finalAggregate.push({ $match: { content: { $regex: keyword, $options: "i" } } });
+      }
+    }
+
     if (req.query.classroom) {
       finalAggregate.push({ $match: { classroom: new mongoose.Types.ObjectId(req.query.classroom) } })
+    }
+
+    if (req.query.activity && mongoose.Types.ObjectId.isValid(String(req.query.activity))) {
+      finalAggregate.push({ $match: { activity: new mongoose.Types.ObjectId(req.query.activity) } });
     }
 
 
@@ -123,16 +143,21 @@ exports.getAllPosts = async (req, res) => {
           foreignField: "_id",
           as: "classroom",
         },
-      }, {
-      $unwind: {
-        path: "$classroom",
-        preserveNullAndEmptyArrays: true
+      },       {
+        $unwind: {
+          path: "$classroom",
+          preserveNullAndEmptyArrays: true
+        },
       },
-    },
+      {
+        $addFields: {
+          activityId: "$activity",
+        },
+      },
       {
         $lookup: {
           from: "activities",
-          localField: "activity",
+          localField: "activityId",
           foreignField: "_id",
           as: "activity",
         },
@@ -239,14 +264,22 @@ exports.getAllClassPosts = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          activityId: "$activity",
+        },
+      },
+      {
         $lookup: {
           from: "activities",
-          localField: "activity",
+          localField: "activityId",
           foreignField: "_id",
           as: "activity",
         },
       }, {
-      $unwind: "$activity",
+      $unwind: {
+        path: "$activity",
+        preserveNullAndEmptyArrays: true,
+      },
     },
       {
         $sort: {
@@ -324,14 +357,22 @@ exports.getAllChildPosts = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          activityId: "$activity",
+        },
+      },
+      {
         $lookup: {
           from: "activities",
-          localField: "activity",
+          localField: "activityId",
           foreignField: "_id",
           as: "activity",
         },
       }, {
-      $unwind: "$activity",
+      $unwind: {
+        path: "$activity",
+        preserveNullAndEmptyArrays: true,
+      },
     },
       {
         $sort: {
@@ -569,10 +610,15 @@ exports.getAllPostComments = async (req, res) => {
 
 exports.getPostById = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate([
+      { path: "author", select: "_id firstName lastName image" },
+      { path: "activity" },
+      { path: "classroom" },
+      { path: "children", select: "_id firstName lastName image classroom" },
+    ]);
 
     if (!post) {
-      return res.json(ApiResponse({}, "Post not found", true));
+      return res.json(ApiResponse({}, "Post not found", false));
     }
 
     return res.json(ApiResponse({ post }, "", true));
@@ -582,6 +628,10 @@ exports.getPostById = async (req, res) => {
 };
 
 exports.updatePost = async (req, res) => {
+  if (req.isAdmin) {
+    return res.status(403).json(ApiResponse({}, "Admins cannot edit posts", false));
+  }
+
   try {
     let post = await Post.findById(req.params.id);
     if (!post) return res.json(ApiResponse({}, "Post not found", false));
