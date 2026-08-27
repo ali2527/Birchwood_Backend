@@ -24,7 +24,7 @@ function getServiceInfo() {
   return {
     name: "Birchwood Academy API",
     status: "running",
-    message: `Birchwood Academy API is running in ${environment} (v${version}), database ${dbStatus}`,
+    message: `Birchwood Academy API v${version} is running.`,
     environment,
     version,
     port: PORT,
