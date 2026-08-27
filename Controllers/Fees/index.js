@@ -7,21 +7,15 @@ const { generateToken } = require("../../Helpers/index");
 const { ApiResponse } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
 const { sendNotificationToAdmin } = require("../../Helpers/notification");
-const {generateRandom6DigitID} = require("../../Helpers");
-const { isAfter } = require("validator");
+const { generateFeeReceiptNo } = require("../../Helpers/feeReceipt");
+const { assertCanAccessChild } = require("../../Helpers/accessControl");
 const { default: mongoose } = require("mongoose");
 
 
 exports.createVoucher = async (req, res) => {
-  const { receiptNo,
-    children,
-    amount,
-    month,
-    year,
-    dueDate,
-    paymentDate } = req.body;
   try {
-    let receiptNo = await generateRandom6DigitID("R");
+    const { children, amount, month, year, dueDate, paymentDate } = req.body;
+    const receiptNo = await generateFeeReceiptNo(month, year);
 
     const fee = new Fees({
       receiptNo,
@@ -103,6 +97,23 @@ exports.getAllVouchers = async (req, res) => {
       });
     }
 
+    finalAggregate.push(
+      {
+        $lookup: {
+          from: "childrens",
+          localField: "children",
+          foreignField: "_id",
+          as: "child",
+        },
+      },
+      {
+        $unwind: {
+          path: "$child",
+          preserveNullAndEmptyArrays: true,
+        },
+      }
+    );
+
     const myAggregate =
       finalAggregate.length > 0
         ? Fees.aggregate(finalAggregate)
@@ -120,6 +131,10 @@ exports.getAllVouchers = async (req, res) => {
 
 exports.getAllChildVouchers = async (req, res) => {
   try {
+    if (!(await assertCanAccessChild(req, res, req.params.id))) {
+      return;
+    }
+
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
     let { keyword, from, to, status } = req.query;

@@ -21,8 +21,13 @@ router.use("/timetable", require("./Timetable"));
 router.use("/category", require("./Category"));
 router.use("/holiday", require("./Holidays"));
 router.use("/homework", require("./Homework"));
+router.use("/notification", require("./Notification"));
+router.use("/support", require("./Support"));
 
+router.use("/admin/auth", require("./Admin/AdminAuth"));
 router.use("/admin/teacher", require("./Admin/AdminTeacher"));
+router.use("/admin/parent", require("./Admin/AdminParent"));
 router.use("/admin/children", require("./Admin/AdminChildren"));
+router.use("/admin/dashboard", require("./Admin/AdminDashboard"));
 
 module.exports = router;

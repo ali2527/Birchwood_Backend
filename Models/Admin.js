@@ -1,12 +1,9 @@
 const mongoose = require("mongoose");
-const { createHmac } = require('node:crypto');
-const mongoosePaginate = require('mongoose-paginate');
+const mongoosePaginate = require("mongoose-paginate");
 const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 const Schema = mongoose.Schema;
 const crypto = require("crypto");
-const { token } = require("morgan");
-const { v4: uuidv4 } = require('uuid');
-const {generateRandom6DigitID} = require("../Helpers")
+const { v4: uuidv4 } = require("uuid");
 
 const adminSchema = new Schema(
   {
@@ -26,6 +23,8 @@ const adminSchema = new Schema(
       required: true,
       unique: true,
       dropDups: true,
+      lowercase: true,
+      trim: true,
     },
     status: {
       type: String,
@@ -82,8 +81,6 @@ adminSchema
       }
     },
     authenticate: function (plainText) {
-        console.log(this.encryptPassword(plainText));
-        console.log(this.hashed_password)
       return this.encryptPassword(plainText) === this.hashed_password;
     },
   };

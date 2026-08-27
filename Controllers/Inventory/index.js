@@ -23,6 +23,14 @@ const {
 } = require("../../Helpers/verification");
 const mongoose = require("mongoose");
 
+function totalIssued(inventory) {
+  return (inventory?.issuances || []).reduce((sum, row) => sum + (Number(row.quantity) || 0), 0);
+}
+
+function availableStock(inventory) {
+  return Math.max(0, (Number(inventory?.quantity) || 0) - totalIssued(inventory));
+}
+
 //addInventory
 exports.addInventory = async (req, res) => {
   const {
@@ -35,8 +43,8 @@ exports.addInventory = async (req, res) => {
     lastAuditDate,
     notes,
     category,
+    storageLocation,
   } = req.body;
-
 
   let sku = await generateRandom6DigitID("I");
 
@@ -52,6 +60,8 @@ exports.addInventory = async (req, res) => {
       lastAuditDate,
       notes,
       category,
+      storageLocation: storageLocation || "",
+      issuances: [],
       gallery: req.files.gallery
         ? req.files.gallery.map((item) => item.filename)
         : "",
@@ -60,12 +70,7 @@ exports.addInventory = async (req, res) => {
     await inventory.save();
 
     return res.status(200).json(
-      ApiResponse(
-        { Inventory },
-
-        "Inventory Created Successfully",
-        true
-      )
+      ApiResponse({ inventory }, "Inventory Created Successfully", true)
     );
   } catch (error) {
     return res.json(
@@ -116,10 +121,10 @@ exports.getAllInventorys = async (req, res) => {
       }
 
 
-      if (req.query.category) {
+      if (req.query.category && mongoose.Types.ObjectId.isValid(req.query.category)) {
         finalAggregate.push({
           $match: {
-            category: req.query.category,
+            "category._id": new mongoose.Types.ObjectId(req.query.category),
           },
         });
       }
@@ -133,8 +138,6 @@ exports.getAllInventorys = async (req, res) => {
     }
 
 
-
-    console.log(finalAggregate)
 
     const myAggregate =
       finalAggregate.length > 0
@@ -216,11 +219,44 @@ exports.updateInventory = async (req, res) => {
     inventory.category = req.body.category
       ? req.body.category
       : inventory.category || "";
+    inventory.storageLocation = req.body.storageLocation
+      ? req.body.storageLocation
+      : inventory.storageLocation || "";
+
+    const nextQuantity = Number(inventory.quantity) || 0;
+    if (nextQuantity < totalIssued(inventory)) {
+      return res.json(
+        ApiResponse(
+          {},
+          "Total stock cannot be less than already issued quantity",
+          false
+        )
+      );
+    }
 
 
 
     let temp = req?.files?.gallery ? req.files.gallery.map((item) => item.filename) : [];
-    allImages = [...inventory.gallery, ...temp];
+    let galleryOrder = [];
+    if (req.body.galleryOrder) {
+      try {
+        galleryOrder = JSON.parse(req.body.galleryOrder);
+      } catch (_) {
+        galleryOrder = [];
+      }
+    }
+    const leadingNewCount = Math.max(0, parseInt(req.body.leadingNewCount || "0", 10) || 0);
+
+    if (Array.isArray(galleryOrder) && galleryOrder.length) {
+      const keptExisting = galleryOrder.filter(
+        (name) => inventory.gallery.includes(name) && !oldImages.includes(name)
+      );
+      const leadingNew = temp.slice(0, leadingNewCount);
+      const trailingNew = temp.slice(leadingNewCount);
+      allImages = [...leadingNew, ...keptExisting, ...trailingNew];
+    } else {
+      allImages = [...inventory.gallery, ...temp];
+    }
 
     if (oldImages && oldImages.length > 0) {
       oldImages.map((item) => {
@@ -242,6 +278,87 @@ exports.updateInventory = async (req, res) => {
     return res.json(ApiResponse({}, error.message, false));
   }
 };
+
+exports.issueStock = async (req, res) => {
+  try {
+    const inventory = await Inventory.findById(req.params.id);
+    if (!inventory) {
+      return res.json(ApiResponse({}, "Inventory not found", false));
+    }
+
+    const quantity = Math.max(0, parseInt(req.body.quantity || "0", 10) || 0);
+    const assignedToType = req.body.assignedToType;
+    const validTypes = ["TEACHER", "CLASSROOM", "STAFF", "DEPARTMENT"];
+
+    if (!quantity) {
+      return res.json(ApiResponse({}, "Issue quantity is required", false));
+    }
+    if (!validTypes.includes(assignedToType)) {
+      return res.json(ApiResponse({}, "Please select who to issue to", false));
+    }
+    if (quantity > availableStock(inventory)) {
+      return res.json(
+        ApiResponse({}, "Not enough stock available to issue", false)
+      );
+    }
+
+    if (
+      (assignedToType === "TEACHER" || assignedToType === "CLASSROOM") &&
+      !req.body.assignedToId
+    ) {
+      return res.json(ApiResponse({}, "Please select an assignee", false));
+    }
+
+    if (
+      (assignedToType === "STAFF" || assignedToType === "DEPARTMENT") &&
+      !req.body.assignedToName
+    ) {
+      return res.json(ApiResponse({}, "Please enter assignee name", false));
+    }
+
+    inventory.issuances.push({
+      quantity,
+      assignedToType,
+      assignedToId:
+        assignedToType === "TEACHER" || assignedToType === "CLASSROOM"
+          ? req.body.assignedToId
+          : undefined,
+      assignedToName: req.body.assignedToName || "",
+      issuedDate: req.body.issuedDate || new Date(),
+      notes: req.body.notes || "",
+    });
+
+    await inventory.save();
+    return res.json(ApiResponse({ inventory }, "Stock issued successfully", true));
+  } catch (error) {
+    return res.json(ApiResponse({}, error.message, false));
+  }
+};
+
+exports.removeIssuance = async (req, res) => {
+  try {
+    const inventory = await Inventory.findById(req.params.id);
+    if (!inventory) {
+      return res.json(ApiResponse({}, "Inventory not found", false));
+    }
+
+    const issuanceId = req.params.issuanceId;
+    const before = inventory.issuances.length;
+    inventory.issuances = inventory.issuances.filter(
+      (row) => String(row._id) !== String(issuanceId)
+    );
+
+    if (inventory.issuances.length === before) {
+      return res.json(ApiResponse({}, "Issuance record not found", false));
+    }
+
+    await inventory.save();
+    return res.json(ApiResponse({ inventory }, "Issuance returned to stock", true));
+  } catch (error) {
+    return res.json(ApiResponse({}, error.message, false));
+  }
+};
+
 //toggleStatus
 exports.toggleStatus = async (req, res) => {
   try {

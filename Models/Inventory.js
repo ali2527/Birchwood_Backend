@@ -1,12 +1,40 @@
 const mongoose = require("mongoose");
-const { createHmac } = require('node:crypto');
-const mongoosePaginate = require('mongoose-paginate');
+const mongoosePaginate = require("mongoose-paginate");
 const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 const Schema = mongoose.Schema;
-const crypto = require("crypto");
-const { token } = require("morgan");
-const { v4: uuidv4 } = require('uuid');
-const {generateRandom6DigitID} = require("../Helpers")
+const { generateRandom6DigitID } = require("../Helpers");
+
+const issuanceSchema = new Schema(
+  {
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    assignedToType: {
+      type: String,
+      enum: ["TEACHER", "CLASSROOM", "STAFF", "DEPARTMENT"],
+      required: true,
+    },
+    assignedToId: {
+      type: Schema.Types.ObjectId,
+      required: false,
+    },
+    assignedToName: {
+      type: String,
+      default: "",
+    },
+    issuedDate: {
+      type: Date,
+      default: Date.now,
+    },
+    notes: {
+      type: String,
+      default: "",
+    },
+  },
+  { timestamps: true }
+);
 
 const inventorySchema = new Schema(
   {
@@ -14,54 +42,61 @@ const inventorySchema = new Schema(
       type: String,
       unique: false,
     },
-    title:{
+    title: {
       type: String,
-      required:true
+      required: true,
     },
-    description:{
+    description: {
       type: String,
-      required:true
+      required: true,
     },
     quantity: {
       type: Number,
       required: true,
     },
-    manufacturer:{
+    manufacturer: {
       type: String,
-      required:false
+      required: false,
     },
-    purchaseDate:{
+    purchaseDate: {
       type: Date,
-      dafault:new Date()
+      dafault: new Date(),
     },
-    unitPrice:{
-      type:Number,
-      default:0
+    unitPrice: {
+      type: Number,
+      default: 0,
     },
-    lastAuditDate:{
+    lastAuditDate: {
       type: Date,
-      dafault:new Date()
+      dafault: new Date(),
     },
-    notes:{
+    notes: {
       type: String,
-      required:false
+      required: false,
     },
-    category:{
+    storageLocation: {
+      type: String,
+      required: false,
+    },
+    issuances: {
+      type: [issuanceSchema],
+      default: [],
+    },
+    category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "category",
     },
-
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE"],
       default: "ACTIVE",
     },
-    gallery:[
+    gallery: [
       {
         type: String,
-        required:false,
-    }
-    ]
+        required: false,
+      },
+    ],
   },
   { timestamps: true }
 );

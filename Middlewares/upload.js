@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const multer = require("multer");
 const { ApiResponse } = require("../Helpers");
 
-const IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/svg+xml"];
 const VIDEO_TYPES = [
   "video/mp4",
   "video/mpeg",

@@ -204,12 +204,12 @@ exports.getAllMyAttendance = async (req, res) => {
     let finalAggregate = [
       {
         $match: {
-          teacher: req.user._id,
+          teacher: new mongoose.Types.ObjectId(String(req.user._id)),
         },
       },  
       {
         $sort: {
-          checkInDate: -1
+          checkIn: -1
         }
       }
       
@@ -249,7 +249,7 @@ exports.getAllMyAttendance = async (req, res) => {
       if (from) {
         finalAggregate.push({
           $match: {
-            checkInDate: {
+            checkIn: {
               $gte: moment(from).startOf("day").toDate(),
             },
           },
@@ -259,7 +259,7 @@ exports.getAllMyAttendance = async (req, res) => {
       if (to) {
         finalAggregate.push({
           $match: {
-            checkInDate: {
+            checkIn: {
               $lte: moment(to).endOf("day").toDate(),
             },
           },
@@ -284,7 +284,9 @@ exports.getAllMyAttendance = async (req, res) => {
       (attendance) => {
         res.json(ApiResponse(attendance));
       }
-    );
+    ).catch((error) => {
+      res.json(ApiResponse({}, error.message, false));
+    });
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
@@ -320,7 +322,7 @@ exports.getAttendanceByMonth = async (req, res) => {
     const attendanceStats = await Attendance.aggregate([
       {
         $match: {
-          teacher: req.user._id,
+          teacher: new mongoose.Types.ObjectId(String(req.user._id)),
           checkIn: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -384,7 +386,7 @@ exports.getMonthlyAttendanceStats = async (req, res) => {
    const attendanceStats = await Attendance.aggregate([
     {
       $match: {
-        teacher: req.user._id,
+        teacher: new mongoose.Types.ObjectId(String(req.user._id)),
         checkIn: { $gte: startOfMonth, $lte: endOfMonth }
       }
     },

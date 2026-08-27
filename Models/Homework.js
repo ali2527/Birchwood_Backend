@@ -16,7 +16,7 @@ const homeworkSchema = new Schema(
     },
     teacher: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "children",
+        ref: "teacher",
       },
     children: {
       type: mongoose.Schema.Types.ObjectId,

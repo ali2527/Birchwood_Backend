@@ -1,6 +1,7 @@
 //Models
 const Teacher = require("../../Models/Teacher");
 const Parent = require("../../Models/Parent");
+const Admin = require("../../Models/Admin");
 const Reset = require("../../Models/Reset");
 
 //Helpers
@@ -17,10 +18,11 @@ exports.emailVerificationCode = async (req, res) => {
   try {
     let { email } = req.body;
 
-    let parent = await Parent.findOne({ email });
-    let teacher = await Teacher.findOne({ email });
+    const parent = await Parent.findOne({ email });
+    const teacher = await Teacher.findOne({ email });
+    const admin = await Admin.findOne({ email });
 
-    if (!parent && !teacher) {
+    if (!parent && !teacher && !admin) {
       return res
         .status(400)
         .json(ApiResponse({}, "User With this email does not exist", false));
@@ -93,17 +95,25 @@ exports.resetPassword = async (req, res) => {
         .status(400)
         .json(ApiResponse({}, "Verification Code dosent Match Email", false));
     }
-    let parent = await Parent.findOne({ email });
-    let teacher = await Teacher.findOne({ email });
+    const parent = await Parent.findOne({ email });
+    const teacher = await Teacher.findOne({ email });
+    const admin = await Admin.findOne({ email });
 
     await Reset.deleteOne({ code: code, email: email });
 
     if (parent) {
       parent.password = password;
       await parent.save();
-    } else {
+    } else if (teacher) {
       teacher.password = password;
       await teacher.save();
+    } else if (admin) {
+      admin.password = password;
+      await admin.save();
+    } else {
+      return res
+        .status(400)
+        .json(ApiResponse({}, "User With this email does not exist", false));
     }
     await res
       .status(201)

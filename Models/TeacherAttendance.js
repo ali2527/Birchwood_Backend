@@ -41,7 +41,7 @@ const teacherAttendanceSchema = new Schema(
 
 teacherAttendanceSchema.plugin(mongoosePaginate);
 teacherAttendanceSchema.plugin(aggregatePaginate);
-teacherAttendanceSchema.index({ teacher: 1, checkInDate: 1 });
+teacherAttendanceSchema.index({ teacher: 1, checkIn: 1 });
 teacherAttendanceSchema.index({ teacher: 1 });
-teacherAttendanceSchema.index({ checkInDate: 1 });
+teacherAttendanceSchema.index({ checkIn: 1 });
 module.exports = mongoose.model("teacherAttendance", teacherAttendanceSchema);

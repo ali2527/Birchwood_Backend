@@ -58,19 +58,54 @@ exports.checkFileExtention = (file, extentions) => {
   return true;
 };
 
+const ADMIN_TOKEN_TYPE = "admin";
+const APP_TOKEN_TYPE = "user";
+
+const getAdminSecret = () =>
+  process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET;
+
 exports.generateToken = (user) => {
   const token = jwt.sign(
     {
       _id: user._id,
       email: user.email,
       name: user.name,
-      isAdmin: Boolean(user.isAdmin),
+      role: "user",
+      tokenType: APP_TOKEN_TYPE,
+      isAdmin: false,
     },
     process.env.JWT_SECRET,
-    { expiresIn:  "12h"}
+    { expiresIn: "12h" }
   );
   return token;
 };
+
+exports.generateAdminToken = (admin) => {
+  const token = jwt.sign(
+    {
+      _id: admin._id,
+      email: admin.email,
+      role: "admin",
+      tokenType: ADMIN_TOKEN_TYPE,
+      isAdmin: true,
+    },
+    getAdminSecret(),
+    {
+      expiresIn: "12h",
+      issuer: "birchwood-admin",
+      audience: "admin-api",
+    }
+  );
+  return token;
+};
+
+exports.verifyAdminToken = (token) =>
+  jwt.verify(String(token).replace("Bearer ", ""), getAdminSecret(), {
+    issuer: "birchwood-admin",
+    audience: "admin-api",
+  });
+
+exports.ADMIN_TOKEN_TYPE = ADMIN_TOKEN_TYPE;
 
 exports.validateToken = (req, res, next) => {
   const bearerHeader = req.headers["authorization"];

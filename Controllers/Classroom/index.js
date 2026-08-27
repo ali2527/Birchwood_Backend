@@ -1,5 +1,8 @@
 //Models
 const Classroom = require("../../Models/Classroom");
+const Teacher = require("../../Models/Teacher");
+const Children = require("../../Models/Children");
+const Timetable = require("../../Models/TimeTable");
 const fs = require("fs");
 const crypto = require("crypto");
 const moment = require("moment");
@@ -9,7 +12,7 @@ const { ApiResponse } = require("../../Helpers/index");
 const { validateToken } = require("../../Helpers/index");
 const { generateString } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
-const {generateRandom6DigitID} = require("../../Helpers")
+const { resolveClassroomId, normalizeClassroomId } = require("../../Helpers/classroomId");
 const {
   sendNotificationToAdmin,
   sendNotificationToUser,
@@ -20,31 +23,45 @@ const {
   validateResetToken,
 } = require("../../Helpers/verification");
 const mongoose = require("mongoose");
-const Teacher = require("../../Models/Teacher");
+const {
+  assignTeacherToClassroom,
+} = require("../../Helpers/classroomTeacherAssignment");
 
 exports.addClassroom = async (req, res) => {
-  const { classroomName,classroomGrade,classroomBatch, description,teacher } = req.body;
+  const { classroomName, classroomGrade, classroomBatch, description, teacher, color, classroomId } = req.body;
   try {
-    // Check if the student exists
     const existingclassroom = await Classroom.findOne({ classroomName });
 
     if (existingclassroom) {
       return res.json(ApiResponse({}, "Classroom with this name already Exists", false));
     }
 
+    let resolvedClassroomId;
+    try {
+      resolvedClassroomId = await resolveClassroomId(Classroom, {
+        classroomGrade,
+        classroomName,
+        classroomId: classroomId ? normalizeClassroomId(classroomId) : undefined,
+      });
+    } catch (idError) {
+      return res.json(ApiResponse({}, idError.message, false));
+    }
 
-    let classroomId = await generateRandom6DigitID("CL");
-    // Save the classroom
     const classroom = new Classroom({
-      classroomId,
+      classroomId: resolvedClassroomId,
       classroomName,
       classroomGrade,
       classroomBatch,
       description,
       teacher,
+      color,
     });
 
     await classroom.save();
+
+    if (teacher) {
+      await assignTeacherToClassroom(classroom._id, teacher);
+    }
 
     const title = "New Classroom Created";
     const content = `A new Classroom has been created. Classroom name : ${classroomName}`;
@@ -72,7 +89,7 @@ exports.getAllClassrooms = async (req, res) => {
     let finalAggregate = [
       {
         $sort: {
-          classroomGrade: -1,
+          createdAt: req.query.sort === "oldest" ? 1 : -1,
         },
       },
     {
@@ -86,8 +103,29 @@ exports.getAllClassrooms = async (req, res) => {
     {
       $unwind: {
           path: "$teacher",
-          preserveNullAndEmptyArrays: true, // Keep teachers with no classroom assigned
+          preserveNullAndEmptyArrays: true,
         },
+    },
+    {
+      $lookup: {
+        from: "childrens",
+        localField: "_id",
+        foreignField: "classroom",
+        as: "students",
+      },
+    },
+    {
+      $addFields: {
+        studentCount: { $size: { $ifNull: ["$students", []] } },
+      },
+    },
+    {
+      $project: {
+        students: 0,
+        "teacher.hashed_password": 0,
+        "teacher.salt": 0,
+        "teacher.tokens": 0,
+      },
     }
     ];
 
@@ -106,6 +144,8 @@ exports.getAllClassrooms = async (req, res) => {
             { classroomName: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
             { classroomId: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
             { classroomGrade: { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
+            { "teacher.firstName": { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
+            { "teacher.lastName": { $regex: ".*" + req.query.keyword.toLowerCase() + ".*", $options: "i" } },
           ]}
         }
       );
@@ -139,13 +179,20 @@ exports.getAllClassrooms = async (req, res) => {
 // Get classroom by ID
 exports.getClassroomById = async (req, res) => {
   try {
-    const classroom = await Classroom.findById(req.params.id).populate("teacher");
+    const classroom = await Classroom.findById(req.params.id)
+      .populate("teacher", "firstName lastName email phone image teacherId status")
+      .lean();
 
     if (!classroom) {
       return res.json(ApiResponse({}, "Classroom not found", true));
     }
 
-    return res.json(ApiResponse({ classroom }, "", true));
+    const students = await Children.find({ classroom: classroom._id })
+      .select("firstName lastName rollNumber image status")
+      .sort({ firstName: 1 })
+      .lean();
+
+    return res.json(ApiResponse({ classroom: { ...classroom, students } }, "", true));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
   }
@@ -187,19 +234,50 @@ exports.searchTeachers = async (req, res) => {
 // Get classroom by ID
 exports.updateClassroom = async (req, res) => {
   try {
-    if(req.body.teacher){
-      let teacher = await Teacher.findById(req.body.teacher);
+    const previous = await Classroom.findById(req.params.id);
+    if (!previous) {
+      return res.json(ApiResponse({}, "No classroom found", false));
+    }
+
+    const hasTeacherField = Object.prototype.hasOwnProperty.call(req.body, "teacher");
+    const nextTeacher = hasTeacherField
+      ? req.body.teacher || null
+      : undefined;
+
+    if (hasTeacherField && nextTeacher) {
+      const teacher = await Teacher.findById(nextTeacher);
       if (!teacher) {
         return res.json(ApiResponse({}, "No teacher found", false));
       }
     }
-    let classroom = await Classroom.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, 
+
+    const { teacher, classroomId, ...rest } = req.body;
+
+    if (classroomId !== undefined) {
+      try {
+        rest.classroomId = await resolveClassroomId(Classroom, {
+          classroomGrade: rest.classroomGrade || previous.classroomGrade,
+          classroomName: rest.classroomName || previous.classroomName,
+          classroomId: normalizeClassroomId(classroomId),
+          excludeId: previous._id,
+        });
+      } catch (idError) {
+        return res.json(ApiResponse({}, idError.message, false));
+      }
+    }
+
+    let classroom = await Classroom.findByIdAndUpdate(req.params.id, rest, {
+      new: true,
     });
 
-    if (!classroom) {
-      return res.json(ApiResponse({}, "No classroom found", false));
+    if (hasTeacherField) {
+      classroom = await assignTeacherToClassroom(
+        classroom._id,
+        nextTeacher,
+        previous.teacher
+      );
     }
+
     return res.json(ApiResponse(classroom, "classroom updated successfully"));
   } catch (error) {
     return res.json(ApiResponse({}, error.message, false));
@@ -209,11 +287,26 @@ exports.updateClassroom = async (req, res) => {
 // Delete a classroom
 exports.deleteClassroom = async (req, res) => {
   try {
-    const classroom = await Classroom.findByIdAndRemove(req.params.id);
+    const classroom = await Classroom.findById(req.params.id);
 
     if (!classroom) {
-      return res.json(ApiResponse({}, "Classroom not found", false));
+      return res.status(404).json(ApiResponse({}, "Classroom not found", false));
     }
+
+    const studentCount = await Children.countDocuments({ classroom: classroom._id });
+    if (studentCount > 0) {
+      return res.status(400).json(
+        ApiResponse(
+          {},
+          "Cannot delete this class while students are assigned. Reassign or remove the students first.",
+          false
+        )
+      );
+    }
+
+    await Timetable.deleteMany({ classroom: classroom._id });
+    await Teacher.updateMany({ classroom: classroom._id }, { $unset: { classroom: 1 } });
+    await Classroom.findByIdAndDelete(classroom._id);
 
     return res.json(ApiResponse({}, "Classroom Deleted Successfully", true));
   } catch (error) {

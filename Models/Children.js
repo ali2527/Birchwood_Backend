@@ -40,21 +40,21 @@ const childSchema = new Schema(
       ref: "parent",
     },
 
-    allergies:{
-      type: String,
-      required: false,
+    allergies: {
+      type: [String],
+      default: [],
     },
-    fears:{
-      type: String,
-      required: false,
+    fears: {
+      type: [String],
+      default: [],
     },
-    conditions:{
-      type: String,
-      required: false,
+    conditions: {
+      type: [String],
+      default: [],
     },
-    summary:{
-      type: String,
-      required: false,
+    summary: {
+      type: [String],
+      default: [],
     },
     classroom:{
       type: mongoose.Schema.Types.ObjectId,

@@ -21,9 +21,13 @@ const TEACHER_PROFILE_FIELDS = [
 
 exports.getProfile = async (req, res) => {
   try {
+    const teacher = await Teacher.findById(req.user._id).populate("classroom");
+    if (!teacher) {
+      return res.json(ApiResponse({}, "No Teacher found", false));
+    }
     return res
       .status(200)
-      .json(ApiResponse(sanitizeUser(req.user), "Found Teacher Details", true));
+      .json(ApiResponse(sanitizeUser(teacher), "Found Teacher Details", true));
   } catch (error) {
     return res.status(500).json(ApiResponse({}, error.message, false));
   }

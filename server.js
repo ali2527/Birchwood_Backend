@@ -100,8 +100,13 @@ app.get("/", (req, res) => {
   res.status(200).json(getServiceInfo());
 });
 
-http.createServer(app).listen(PORT, () => {
+const { initSocket } = require("./config/socket");
+
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   const env = process.env.NODE_ENV || "development";
-  const version = process.env.VERSION || "1.0.0";
-  const baseUrl = `http://localhost:${PORT}`;
+  console.log(`Birchwood Server is running on port ${PORT} (${env})`);
+  console.log("Socket.IO notifications enabled");
 });

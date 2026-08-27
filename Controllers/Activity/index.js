@@ -69,7 +69,9 @@ exports.getAllActivities = async (req, res) => {
     if (keyword) {
       const regex = new RegExp(keyword.toLowerCase(), "i");
       finalAggregate.push({
-        $match: {firstName: { $regex: regex }},
+        $match: {
+          $or: [{ title: { $regex: regex } }, { description: { $regex: regex } }],
+        },
       });
     }
 
