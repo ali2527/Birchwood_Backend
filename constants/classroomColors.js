@@ -12,3 +12,4 @@ module.exports = {
   DEFAULT_CLASSROOM_COLOR,
   isValidClassroomColor,
 };
+
