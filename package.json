@@ -17,17 +17,10 @@
     "sync:activity-images": "node scripts/sync-activity-images.js",
     "seed:fees-homework-posts-notifications": "node scripts/seed-fees-homework-posts-notifications.js",
     "seed:inventory-holidays-activities": "node scripts/seed-inventory.js && node scripts/seed-holidays.js && node scripts/seed-activities.js",
-    "seed:attendance": "node scripts/seed-teacher-attendance.js",
+    "seed:attendance": "node scripts/seed-student-attendance.js && node scripts/seed-teacher-attendance.js",
     "seed:timetable": "node scripts/seed-timetable.js",
     "assign:teacher-classrooms": "node scripts/assign-teacher-classrooms.js",
-    "assign:students": "node scripts/assign-students.js",
-    "test:teacher-portal": "node scripts/test-teacher-portal.js",
-    "test:admin-portal": "node scripts/test-admin-portal.js",
-    "test:classroom-teacher": "node scripts/test-classroom-teacher-assignment.js",
-    "test:children-admin": "node scripts/test-children-admin.js",
-    "test:student-assignments": "node scripts/test-student-assignments.js",
-    "test:inventory-holidays-activities": "node scripts/test-inventory-holidays-activities.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "assign:students": "node scripts/assign-students.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",

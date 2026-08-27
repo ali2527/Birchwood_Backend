@@ -13,6 +13,7 @@ const {
   sendNotificationToUser,
 } = require("../../Helpers/notification");
 const { sendCommentNotification, sendLikeAndLoveNotification } = require("../../Helpers/sockets");
+const { assertPostModifyAccess } = require("../../Helpers/accessControl");
 const mongoose = require('mongoose');
 
 exports.addPost = async (req, res) => {
@@ -628,13 +629,12 @@ exports.getPostById = async (req, res) => {
 };
 
 exports.updatePost = async (req, res) => {
-  if (req.isAdmin) {
-    return res.status(403).json(ApiResponse({}, "Admins cannot edit posts", false));
-  }
-
   try {
     let post = await Post.findById(req.params.id);
     if (!post) return res.json(ApiResponse({}, "Post not found", false));
+    if (!assertPostModifyAccess(req, res, post, { adminCanEdit: false })) {
+      return;
+    }
 
     let oldImages = req.body.oldImages ? JSON.parse(req.body.oldImages) : [];
     let oldVideos = req.body.oldVideos ? JSON.parse(req.body.oldVideos) : [];
@@ -745,11 +745,16 @@ exports.updatePost = async (req, res) => {
 
 exports.deletePost = async (req, res) => {
   try {
-    const post = await Post.findByIdAndRemove(req.params.id);
+    const post = await Post.findById(req.params.id);
 
     if (!post) {
       return res.json(ApiResponse({}, "Post not found", false));
     }
+    if (!assertPostModifyAccess(req, res, post, { adminCanEdit: true })) {
+      return;
+    }
+
+    await Post.findByIdAndRemove(req.params.id);
 
     return res.json(ApiResponse({}, "Post Deleted Successfully", true));
   } catch (error) {

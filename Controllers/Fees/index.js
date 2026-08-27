@@ -8,6 +8,7 @@ const { ApiResponse } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
 const { sendNotificationToAdmin } = require("../../Helpers/notification");
 const { generateFeeReceiptNo } = require("../../Helpers/feeReceipt");
+const { assertCanAccessChild } = require("../../Helpers/accessControl");
 const { default: mongoose } = require("mongoose");
 
 
@@ -130,6 +131,10 @@ exports.getAllVouchers = async (req, res) => {
 
 exports.getAllChildVouchers = async (req, res) => {
   try {
+    if (!(await assertCanAccessChild(req, res, req.params.id))) {
+      return;
+    }
+
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
     let { keyword, from, to, status } = req.query;

@@ -13,8 +13,8 @@ const { authenticatedRoute, adminRoute } = require("../../Middlewares/auth");
 const { createVoucherValidator } = require("../../Validator/feesValidator");
 
 router.post("/createVoucher", adminRoute, createVoucherValidator, createVoucher);
-router.get("/getAllVouchers", authenticatedRoute, getAllVouchers);
-router.get("/getVoucherById/:id", authenticatedRoute, getVoucherById);
+router.get("/getAllVouchers", adminRoute, getAllVouchers);
+router.get("/getVoucherById/:id", adminRoute, getVoucherById);
 router.get("/getAllChildVouchers/:id", authenticatedRoute, getAllChildVouchers);
 router.post("/updateVoucher/:id", adminRoute, updateVoucher);
 router.get("/toggleStatus/:id", adminRoute, toggleStatus);

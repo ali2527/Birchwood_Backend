@@ -165,6 +165,51 @@ exports.getAllTickets = async (req, res) => {
           path: "$relatedChild",
           preserveNullAndEmptyArrays: true,
         },
+      },
+      {
+        $lookup: {
+          from: "teachers",
+          localField: "participant",
+          foreignField: "_id",
+          as: "participantTeacherDoc",
+          pipeline: [{ $project: { image: 1 } }],
+        },
+      },
+      {
+        $lookup: {
+          from: "parents",
+          localField: "participant",
+          foreignField: "_id",
+          as: "participantParentDoc",
+          pipeline: [{ $project: { image: 1 } }],
+        },
+      },
+      {
+        $addFields: {
+          participantImage: {
+            $cond: [
+              { $eq: ["$participantRole", "TEACHER"] },
+              {
+                $let: {
+                  vars: { row: { $arrayElemAt: ["$participantTeacherDoc", 0] } },
+                  in: "$$row.image",
+                },
+              },
+              {
+                $let: {
+                  vars: { row: { $arrayElemAt: ["$participantParentDoc", 0] } },
+                  in: "$$row.image",
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          participantTeacherDoc: 0,
+          participantParentDoc: 0,
+        },
       }
     );
 
@@ -197,6 +242,11 @@ exports.getTicketById = async (req, res) => {
 
     if (!canAccessTicket(req, ticket)) {
       return res.status(403).json(ApiResponse({}, "Access denied", false));
+    }
+
+    const participant = await resolveParticipant(ticket.participantRole, ticket.participant);
+    if (participant?.doc?.image) {
+      ticket.participantImage = participant.doc.image;
     }
 
     return res.json(ApiResponse({ ticket: normalizeTicket(ticket, req) }, "", true));

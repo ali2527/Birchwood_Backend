@@ -45,6 +45,9 @@ async function normalizeHomeworkPayload(body = {}, req = {}) {
 }
 
 async function validateHomeworkAssignment(payload = {}, req = {}) {
+  if (req.userRole === "parent") {
+    return "Parents cannot create or modify homework";
+  }
   if (!payload.title) {
     return "Title is required";
   }

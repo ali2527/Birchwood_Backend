@@ -4,13 +4,12 @@ const Classroom = require("../../Models/Classroom");
 const Activity = require("../../Models/Activity");
 const Parent = require("../../Models/Parent");
 const Attendance = require("../../Models/Attendance");
+const TeacherAttendance = require("../../Models/TeacherAttendance");
 const Holiday = require("../../Models/Holiday");
 const Homework = require("../../Models/Homework");
-const Post = require("../../Models/Post");
 const { ApiResponse } = require("../../Helpers/index");
 const { errorHandler } = require("../../Helpers/errorHandler");
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const startOfDay = (date) => {
@@ -37,26 +36,6 @@ const mongoDowToMonIndex = (dow) => (dow === 1 ? 6 : dow - 2);
 
 const sum = (values) => values.reduce((total, value) => total + Number(value || 0), 0);
 
-async function monthlyCounts(model, year, dateField = "createdAt", extraMatch = {}) {
-  const start = new Date(year, 0, 1);
-  const end = endOfDay(new Date(year, 11, 31));
-  const rows = await model.aggregate([
-    {
-      $match: {
-        ...extraMatch,
-        [dateField]: { $gte: start, $lte: end },
-      },
-    },
-    { $group: { _id: { $month: `$${dateField}` }, total: { $sum: 1 } } },
-  ]);
-
-  const counts = Array(12).fill(0);
-  rows.forEach((row) => {
-    counts[row._id - 1] = row.total;
-  });
-  return { counts, hasData: rows.length > 0 };
-}
-
 async function weeklyCounts(weekStart, model, dateField, extraMatch = {}) {
   const weekEnd = endOfDay(new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000));
   const rows = await model.aggregate([
@@ -81,6 +60,40 @@ async function weeklyCounts(weekStart, model, dateField, extraMatch = {}) {
   return { totals, hasData: rows.length > 0 };
 }
 
+async function statusBreakdown(model, rangeStart, rangeEnd, dateField = "checkIn", extraMatch = {}) {
+  const rows = await model.aggregate([
+    {
+      $match: {
+        ...extraMatch,
+        [dateField]: { $gte: rangeStart, $lte: rangeEnd },
+      },
+    },
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+
+  const stats = { PRESENT: 0, ABSENT: 0, LEAVE: 0, HOLIDAY: 0 };
+  rows.forEach((row) => {
+    if (stats[row._id] !== undefined) stats[row._id] = row.count;
+  });
+  const tracked = stats.PRESENT + stats.ABSENT + stats.LEAVE;
+  const rate = tracked ? Math.round((stats.PRESENT / tracked) * 100) : 0;
+  return { ...stats, tracked, rate, total: tracked + stats.HOLIDAY };
+}
+
+function buildBreakdownChart(stats = {}) {
+  return {
+    labels: ["Present", "Absent", "Leave", "Holiday"],
+    values: [
+      stats.PRESENT || 0,
+      stats.ABSENT || 0,
+      stats.LEAVE || 0,
+      stats.HOLIDAY || 0,
+    ],
+    rate: stats.rate || 0,
+    tracked: stats.tracked || 0,
+  };
+}
+
 exports.getOverview = async (req, res) => {
   try {
     const now = new Date();
@@ -88,6 +101,8 @@ exports.getOverview = async (req, res) => {
     const month = Number(req.query.month) || now.getMonth() + 1;
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = endOfDay(new Date(year, month, 0));
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
     const thisWeekStart = startOfWeekMonday(now);
     const lastWeekStart = new Date(thisWeekStart);
     lastWeekStart.setDate(lastWeekStart.getDate() - 7);
@@ -98,14 +113,16 @@ exports.getOverview = async (req, res) => {
       classes,
       activities,
       parents,
-      thisYearPosts,
-      lastYearPosts,
-      thisYearEnrollment,
-      lastYearEnrollment,
-      thisWeekPresent,
-      lastWeekPresent,
-      thisWeekHomework,
-      lastWeekHomework,
+      studentTodayStats,
+      teacherTodayStats,
+      studentMonthStats,
+      teacherMonthStats,
+      studentWeekPresent,
+      studentLastWeekPresent,
+      teacherWeekPresent,
+      teacherLastWeekPresent,
+      studentWeekAbsent,
+      teacherWeekAbsent,
       holidays,
       homework,
     ] = await Promise.all([
@@ -114,28 +131,22 @@ exports.getOverview = async (req, res) => {
       Classroom.countDocuments({ status: "ACTIVE" }),
       Activity.countDocuments({ status: "ACTIVE" }),
       Parent.countDocuments({ status: { $ne: "INACTIVE" } }),
-      monthlyCounts(Post, year, "createdAt", { status: { $ne: "INACTIVE" } }),
-      monthlyCounts(Post, year - 1, "createdAt", { status: { $ne: "INACTIVE" } }),
-      monthlyCounts(Children, year, "createdAt", { status: { $ne: "INACTIVE" } }),
-      monthlyCounts(Children, year - 1, "createdAt", { status: { $ne: "INACTIVE" } }),
+      statusBreakdown(Attendance, todayStart, todayEnd),
+      statusBreakdown(TeacherAttendance, todayStart, todayEnd),
+      statusBreakdown(Attendance, monthStart, monthEnd),
+      statusBreakdown(TeacherAttendance, monthStart, monthEnd),
       weeklyCounts(thisWeekStart, Attendance, "checkIn", { status: "PRESENT" }),
       weeklyCounts(lastWeekStart, Attendance, "checkIn", { status: "PRESENT" }),
-      weeklyCounts(thisWeekStart, Homework, "assignDate", { status: { $ne: "INACTIVE" } }),
-      weeklyCounts(lastWeekStart, Homework, "assignDate", { status: { $ne: "INACTIVE" } }),
+      weeklyCounts(thisWeekStart, TeacherAttendance, "checkIn", { status: "PRESENT" }),
+      weeklyCounts(lastWeekStart, TeacherAttendance, "checkIn", { status: "PRESENT" }),
+      weeklyCounts(thisWeekStart, Attendance, "checkIn", { status: "ABSENT" }),
+      weeklyCounts(thisWeekStart, TeacherAttendance, "checkIn", { status: "ABSENT" }),
       Holiday.find({ date: { $gte: monthStart, $lte: monthEnd } }).lean(),
       Homework.find({
         dueDate: { $gte: monthStart, $lte: monthEnd },
         status: { $ne: "INACTIVE" },
       }).lean(),
     ]);
-
-    const usePosts = thisYearPosts.hasData || lastYearPosts.hasData;
-    const activityThis = usePosts ? thisYearPosts.counts : thisYearEnrollment.counts;
-    const activityLast = usePosts ? lastYearPosts.counts : lastYearEnrollment.counts;
-
-    const useWeeklyAttendance = thisWeekPresent.hasData || lastWeekPresent.hasData;
-    const weeklyThis = useWeeklyAttendance ? thisWeekPresent.totals : thisWeekHomework.totals;
-    const weeklyLast = useWeeklyAttendance ? lastWeekPresent.totals : lastWeekHomework.totals;
 
     const calendarMarks = [];
     holidays.forEach((item) => {
@@ -165,22 +176,35 @@ exports.getOverview = async (req, res) => {
             classes,
             activities,
             parents,
+            studentRateMonth: studentMonthStats.rate,
+            teacherRateMonth: teacherMonthStats.rate,
+            studentsPresentToday: studentTodayStats.PRESENT,
+            teachersPresentToday: teacherTodayStats.PRESENT,
+            studentsAbsentToday: studentTodayStats.ABSENT,
+            teachersAbsentToday: teacherTodayStats.ABSENT,
           },
-          activity: {
-            mode: usePosts ? "posts" : "enrollment",
-            labels: MONTH_LABELS,
-            thisYear: activityThis,
-            lastYear: activityLast,
-            thisYearTotal: sum(activityThis),
-            lastYearTotal: sum(activityLast),
-          },
-          weekly: {
-            mode: useWeeklyAttendance ? "attendance" : "homework",
-            labels: WEEK_LABELS,
-            thisWeek: weeklyThis,
-            lastWeek: weeklyLast,
-            thisWeekTotal: sum(weeklyThis),
-            lastWeekTotal: sum(weeklyLast),
+          attendance: {
+            students: {
+              today: studentTodayStats,
+              month: studentMonthStats,
+              breakdown: buildBreakdownChart(studentMonthStats),
+            },
+            teachers: {
+              today: teacherTodayStats,
+              month: teacherMonthStats,
+              breakdown: buildBreakdownChart(teacherMonthStats),
+            },
+            weekly: {
+              labels: WEEK_LABELS,
+              studentsPresent: studentWeekPresent.totals,
+              studentsPresentLast: studentLastWeekPresent.totals,
+              teachersPresent: teacherWeekPresent.totals,
+              teachersPresentLast: teacherLastWeekPresent.totals,
+              studentsAbsent: studentWeekAbsent.totals,
+              teachersAbsent: teacherWeekAbsent.totals,
+              studentsPresentTotal: sum(studentWeekPresent.totals),
+              teachersPresentTotal: sum(teacherWeekPresent.totals),
+            },
           },
           calendar: {
             year,

@@ -7,14 +7,14 @@ const {
   deleteActivity,
 } = require("../../Controllers/Activity/index");
 const router = express.Router();
-const { authenticatedRoute } = require("../../Middlewares/auth");
+const { authenticatedRoute, adminRoute } = require("../../Middlewares/auth");
 const { uploadFile } = require("../../Middlewares/upload");
 const { addActivityValidator } = require("../../Validator/activityValidator");
 
-router.post("/addActivity", authenticatedRoute, uploadFile, addActivityValidator, addActivity);
+router.post("/addActivity", adminRoute, uploadFile, addActivityValidator, addActivity);
 router.get("/getAllActivities", authenticatedRoute, getAllActivities);
 router.get("/getActivityById/:id", authenticatedRoute, getActivityById);
-router.post("/updateActivity/:id", authenticatedRoute, uploadFile, updateActivity);
-router.get("/deleteActivity/:id", authenticatedRoute, deleteActivity);
+router.post("/updateActivity/:id", adminRoute, uploadFile, updateActivity);
+router.get("/deleteActivity/:id", adminRoute, deleteActivity);
 
 module.exports = router;
