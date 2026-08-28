@@ -1,4 +1,4 @@
-require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
+require("../config/loadEnv");
 const {
   ACTIVITY_IMAGES,
   backendImageName,

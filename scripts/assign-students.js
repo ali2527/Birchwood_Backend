@@ -1,7 +1,7 @@
 /**
  * Assign seeded students to parents (1–2 each) and classes (max 2 per class) via admin API.
  */
-require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
+require("../config/loadEnv");
 
 const BASE = `http://localhost:${process.env.PORT || 3031}`;
 const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || "admin@birchwood.local";
