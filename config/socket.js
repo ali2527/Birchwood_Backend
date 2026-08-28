@@ -13,18 +13,11 @@ const {
   ROOMS,
 } = require("../Helpers/socketEmitter");
 const { loadTicketForAccess, canAccessTicket } = require("../Helpers/supportAccess");
+const { getSocketCors } = require("./cors");
 
 function normalizeToken(value) {
   if (!value) return "";
   return String(value).replace(/^Bearer\s+/i, "").trim();
-}
-
-function buildCorsOrigins() {
-  const raw = process.env.CORS_ORIGIN || "*";
-  return raw
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
 }
 
 async function resolveSocketUser(token) {
@@ -69,13 +62,8 @@ async function resolveSocketUser(token) {
 }
 
 function initSocket(server) {
-  const origins = buildCorsOrigins();
   const io = new Server(server, {
-    cors: {
-      origin: origins.includes("*") ? true : origins,
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
+    cors: getSocketCors(),
     transports: ["websocket", "polling"],
   });
 
