@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
+require("../config/loadEnv");
 
 exports.ApiResponse = (data = {}, message = "", status = true) => {
   return {

@@ -3,7 +3,7 @@ const Parent = require("../Models/Parent");
 const Teacher = require("../Models/Teacher");
 const Admin = require("../Models/Admin");
 const { ApiResponse, verifyAdminToken, ADMIN_TOKEN_TYPE } = require("../Helpers");
-require("dotenv").config();
+require("../config/loadEnv");
 
 const getToken = (req) =>
   req.headers.authorization || req.body.token || req.query.token;

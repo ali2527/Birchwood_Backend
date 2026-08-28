@@ -7,10 +7,13 @@ const https = require("https");
 const fs = require("fs");
 const morgan = require("morgan");
 
-require("dotenv").config();
+const { envFile } = require("./config/loadEnv");
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
+}
+if (!process.env.JWT_ADMIN_SECRET) {
+  throw new Error("JWT_ADMIN_SECRET is required");
 }
 
 const app = express();
@@ -37,6 +40,7 @@ function getServiceInfo() {
       status: dbStatus,
       connected: mongoose.connection.readyState === 1,
     },
+    envFile,
     endpoints: {
       root: "/",
       health: "/api/health",
@@ -107,6 +111,6 @@ initSocket(server);
 
 server.listen(PORT, () => {
   const env = process.env.NODE_ENV || "development";
-  console.log(`Birchwood Server is running on port ${PORT} (${env})`);
+  console.log(`Birchwood Server is running on port ${PORT} (${env}, ${envFile})`);
   console.log("Socket.IO notifications enabled");
 });

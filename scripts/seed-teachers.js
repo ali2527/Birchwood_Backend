@@ -1,4 +1,4 @@
-require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
+require("../config/loadEnv");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");

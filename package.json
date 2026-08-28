@@ -5,6 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:dev": "node server.js",
+    "start:live": "node server.js --live",
     "dev": "nodemon server.js",
     "seed:admin": "node scripts/seed-admin.js",
     "seed:classrooms": "node scripts/seed-classrooms.js",
