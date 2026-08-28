@@ -1,17 +1,20 @@
-require("../config/loadEnv");
+const { envFile } = require("../config/loadEnv");
 const mongoose = require("mongoose");
 const Admin = require("../Models/Admin");
 const Parent = require("../Models/Parent");
 
-const ADMIN_EMAIL = (process.env.ADMIN_SEED_EMAIL || "admin@birchwood.local")
+const ADMIN_EMAIL = (process.env.ADMIN_SEED_EMAIL || "admin@thebirchwoodacademy.com")
   .trim()
   .toLowerCase();
-const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || "Admin@12345";
+const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || "Bw#9kP2mQ7xR!vL4nT8w";
 
 async function seedAdmin() {
   if (!process.env.DB) {
     throw new Error("DB is not set in .env");
   }
+
+  const environment = process.env.NODE_ENV || "development";
+  console.log(`Seeding admin using ${envFile} (${environment})`);
 
   await mongoose.connect(process.env.DB);
 
