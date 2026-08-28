@@ -4,8 +4,8 @@
 require("../config/loadEnv");
 
 const BASE = `http://localhost:${process.env.PORT || 3031}`;
-const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || "admin@birchwood.local";
-const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || "Admin@12345";
+const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || "admin@thebirchwoodacademy.com";
+const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || "Bw#9kP2mQ7xR!vL4nT8w";
 
 const { parseStringList } = require("../Helpers/childHealth");
 
