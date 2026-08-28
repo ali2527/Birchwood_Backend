@@ -49,26 +49,8 @@ function getServiceInfo() {
   };
 }
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "*")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Not allowed by CORS"));
-  },
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-  allowedHeaders:
-    "Content-Type, Authorization, X-Requested-With, Accept, VERSION",
-  exposedHeaders:
-    "Content-Type, Authorization, X-Requested-With, Accept, VERSION",
-};
+const { getCorsOptions } = require("./config/cors");
+const corsOptions = getCorsOptions();
 
 app.use(
   helmet({
@@ -76,6 +58,7 @@ app.use(
   })
 );
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 morgan.token("remote-addr", (req) => {
   const addr = req.ip || (req.socket && req.socket.remoteAddress) || "";
