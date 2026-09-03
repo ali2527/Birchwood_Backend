@@ -7,7 +7,7 @@ const Reset = require("../../Models/Reset");
 //Helpers
 const { ApiResponse } = require("../../Helpers/index");
 const { generateString } = require("../../Helpers/index");
-const { generateEmail } = require("../../Helpers/email");
+const { sendPasswordResetEmail } = require("../../Helpers/email");
 const {
   createResetToken,
   validateResetToken,
@@ -25,7 +25,7 @@ exports.emailVerificationCode = async (req, res) => {
     if (!parent && !teacher && !admin) {
       return res
         .status(400)
-        .json(ApiResponse({}, "User With this email does not exist", false));
+        .json(ApiResponse({}, "No account found with this email", false));
     }
 
     const verificationCode = generateString(4, false, true);
@@ -34,22 +34,19 @@ exports.emailVerificationCode = async (req, res) => {
       JSON.stringify({ email, code: verificationCode }),
       "ascii"
     ).toString("base64");
-    const html = `
-                <div>
-                  <p>
-                    You are receiving this because you (or someone else) have requested the reset of the
-                    password for your account.
-                  </p>
-                  <p>Your verification code is ${verificationCode}</p>
-                  <p>
-                    <strong>
-                      If you did not request this, please ignore this email and your password will remain
-                      unchanged.
-                    </strong>
-                  </p>
-                </div>
-    `;
-    await generateEmail(email, "The Birchwood Academy - Password Reset", html);
+    const sent = await sendPasswordResetEmail(email, verificationCode);
+
+    if (!sent) {
+      return res
+        .status(502)
+        .json(
+          ApiResponse(
+            {},
+            "Failed to send verification email. Please try again later.",
+            false,
+          ),
+        );
+    }
     res
       .status(201)
       .json(
@@ -60,7 +57,7 @@ exports.emailVerificationCode = async (req, res) => {
         )
       );
   } catch (err) {
-    res.status(500).json(ApiResponse({}, err.toString(), false));
+    res.status(500).json(ApiResponse({}, "Something went wrong. Please try again.", false));
   }
 };
 
@@ -73,13 +70,13 @@ exports.verifyRecoverCode = async (req, res) => {
     if (isValidCode) {
       return res
         .status(200)
-        .json(ApiResponse({}, "Verification Code Verified", true));
+        .json(ApiResponse({}, "Code verified", true));
     } else
       return res
         .status(400)
-        .json(ApiResponse({}, "Invalid Verification Code", false));
+        .json(ApiResponse({}, "Invalid or expired verification code", false));
   } catch (err) {
-    res.status(500).json(ApiResponse({}, err.toString(), false));
+    res.status(500).json(ApiResponse({}, "Something went wrong. Please try again.", false));
   }
 };
 
@@ -93,7 +90,7 @@ exports.resetPassword = async (req, res) => {
     if (!reset_status) {
       return res
         .status(400)
-        .json(ApiResponse({}, "Verification Code dosent Match Email", false));
+        .json(ApiResponse({}, "This reset code does not match that email", false));
     }
     const parent = await Parent.findOne({ email });
     const teacher = await Teacher.findOne({ email });
@@ -113,12 +110,12 @@ exports.resetPassword = async (req, res) => {
     } else {
       return res
         .status(400)
-        .json(ApiResponse({}, "User With this email does not exist", false));
+        .json(ApiResponse({}, "No account found with this email", false));
     }
     await res
       .status(201)
-      .json(ApiResponse({}, "Password Updated Successfully", true));
+      .json(ApiResponse({}, "Password updated successfully", true));
   } catch (err) {
-    res.status(500).json(ApiResponse({}, err.toString(), false));
+    res.status(500).json(ApiResponse({}, "Something went wrong. Please try again.", false));
   }
 };
